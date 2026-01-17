@@ -52,6 +52,14 @@ def test_diff_traces_detects_decoding_mismatch():
     assert result.category == "GEN_CONTEXT_MISMATCH"
 
 
+def test_diff_traces_detects_temperature_mismatch():
+    base = [{"prompt_id": "a", "decoding_temperature": 0.0, "generated_token_ids": [1]}]
+    other = [{"prompt_id": "a", "decoding_temperature": 0.5, "generated_token_ids": [1]}]
+    result = diff_traces(base, other)
+    assert result.status == "FAIL"
+    assert result.category == "GEN_CONTEXT_MISMATCH"
+
+
 def test_aggregate_diffs_returns_first_failure():
     pass_result = diff_traces(
         [{"prompt_id": "a", "generated_token_ids": [1]}],

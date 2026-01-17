@@ -78,8 +78,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seed for determinism controls (defaults to 0 when omitted)",
     )
     run_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
+    run_parser.add_argument(
+        "--temperature", type=float, default=0.0, help="Sampling temperature"
+    )
+    run_parser.add_argument("--top-p", type=float, default=1.0, help="Top-p nucleus sampling")
+    run_parser.add_argument(
+        "--top-k", type=int, default=0, help="Top-k sampling (0 disables)"
+    )
     run_parser.add_argument("--dtype", default="float32", help="Model dtype")
     run_parser.add_argument("--device", default="cpu", help="Device")
+    run_parser.add_argument(
+        "--tokenizer-revision", required=False, help="Tokenizer revision or commit hash"
+    )
     run_parser.add_argument("--mode", choices=["strict", "best-effort"], default="best-effort")
     run_parser.add_argument(
         "--out",
@@ -119,8 +129,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check_parser.add_argument("--seed", type=int, default=0, help="Seed for determinism controls")
     check_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
+    check_parser.add_argument(
+        "--temperature", type=float, default=0.0, help="Sampling temperature"
+    )
+    check_parser.add_argument("--top-p", type=float, default=1.0, help="Top-p nucleus sampling")
+    check_parser.add_argument(
+        "--top-k", type=int, default=0, help="Top-k sampling (0 disables)"
+    )
     check_parser.add_argument("--dtype", default="float32", help="Model dtype")
     check_parser.add_argument("--device", default="cpu", help="Device")
+    check_parser.add_argument(
+        "--tokenizer-revision", required=False, help="Tokenizer revision or commit hash"
+    )
     check_parser.add_argument("--mode", choices=["strict", "best-effort"], default="best-effort")
     check_parser.add_argument(
         "--out",
@@ -509,9 +529,12 @@ def _run_generation(
                     "input_token_ids_hash": _hash_token_ids(item["input_ids"]),
                     "generated_token_ids": item["output_ids"],
                     "scores": item.get("scores"),
-                    "tokenizer_id": args.model,
+                    "tokenizer_id": item.get("tokenizer_id") or args.model,
                     "decoding_max_new_tokens": args.max_new_tokens,
                     "decoding_do_sample": False,
+                    "decoding_temperature": args.temperature,
+                    "decoding_top_p": args.top_p,
+                    "decoding_top_k": args.top_k,
                 }
             )
     return rows
@@ -534,12 +557,15 @@ def _build_run_config(
         "decoding": {
             "max_new_tokens": args.max_new_tokens,
             "do_sample": False,
+            "temperature": args.temperature,
+            "top_p": args.top_p,
+            "top_k": args.top_k,
         },
         "batch_size": args.batch_size,
         "vary_batch": vary_batch,
         "tokenizer": {
             "id": args.model,
-            # TODO: Capture tokenizer revision + class metadata.
+            "revision": getattr(args, "tokenizer_revision", None),
         },
         "generation_context": {
             "device_snapshot": device_snapshot,

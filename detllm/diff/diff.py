@@ -75,7 +75,13 @@ def diff_traces(
                 },
             )
 
-        decoding_fields = ("decoding_max_new_tokens", "decoding_do_sample")
+        decoding_fields = (
+            "decoding_max_new_tokens",
+            "decoding_do_sample",
+            "decoding_temperature",
+            "decoding_top_p",
+            "decoding_top_k",
+        )
         for field_name in decoding_fields:
             if _field_mismatch(left, right, field_name):
                 return DiffResult(

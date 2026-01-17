@@ -87,6 +87,9 @@ class TokenTraceRow:
     tokenizer_id: str | None = None
     decoding_max_new_tokens: int | None = None
     decoding_do_sample: bool | None = None
+    decoding_temperature: float | None = None
+    decoding_top_p: float | None = None
+    decoding_top_k: int | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TokenTraceRow":

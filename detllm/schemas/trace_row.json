@@ -11,7 +11,10 @@
     "scores": {"type": ["array", "null"], "items": {"type": "number"}},
     "tokenizer_id": {"type": ["string", "null"]},
     "decoding_max_new_tokens": {"type": ["integer", "null"]},
-    "decoding_do_sample": {"type": ["boolean", "null"]}
+    "decoding_do_sample": {"type": ["boolean", "null"]},
+    "decoding_temperature": {"type": ["number", "null"]},
+    "decoding_top_p": {"type": ["number", "null"]},
+    "decoding_top_k": {"type": ["integer", "null"]}
   },
   "additionalProperties": true
 }

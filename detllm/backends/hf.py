@@ -34,6 +34,7 @@ class HFBackend(BackendAdapter):
         torch_dtype = dtype_map.get(self.dtype, torch.float32)
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        self._tokenizer_id = getattr(self.tokenizer, "name_or_path", self.model_id)
         if self.tokenizer.pad_token_id is None and self.tokenizer.eos_token_id is not None:
             # TODO: Allow configuring pad token instead of defaulting to EOS.
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
@@ -101,6 +102,7 @@ class HFBackend(BackendAdapter):
                     "input_ids": inputs["input_ids"][i].tolist(),
                     "output_ids": sequences[i].tolist(),
                     "scores": scores,
+                    "tokenizer_id": self._tokenizer_id,
                 }
             )
         return results
