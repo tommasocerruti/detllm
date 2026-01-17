@@ -64,3 +64,19 @@ Or use the Makefile target:
 ```bash
 make test-integration
 ```
+
+## Tier 2 score capture (verified)
+
+Run a Tier 2 check:
+
+```bash
+detllm check --backend hf --model distilgpt2 --prompt "Hello" --tier 2 --runs 2 --batch-size 1 --out artifacts/check_t2
+```
+
+Then inspect the trace:
+
+```bash
+head -n 1 artifacts/check_t2/traces/run_0.jsonl
+```
+
+You should see a `scores` field containing per-token logprobs.
