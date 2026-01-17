@@ -84,6 +84,9 @@ class TokenTraceRow:
     input_token_ids_hash: str
     generated_token_ids: list[int]
     scores: list[float] | None
+    tokenizer_id: str | None = None
+    decoding_max_new_tokens: int | None = None
+    decoding_do_sample: bool | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TokenTraceRow":

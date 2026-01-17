@@ -8,7 +8,10 @@
     "input_token_ids": {"type": "array", "items": {"type": "integer"}},
     "input_token_ids_hash": {"type": "string"},
     "generated_token_ids": {"type": "array", "items": {"type": "integer"}},
-    "scores": {"type": ["array", "null"], "items": {"type": "number"}}
+    "scores": {"type": ["array", "null"], "items": {"type": "number"}},
+    "tokenizer_id": {"type": ["string", "null"]},
+    "decoding_max_new_tokens": {"type": ["integer", "null"]},
+    "decoding_do_sample": {"type": ["boolean", "null"]}
   },
   "additionalProperties": true
 }

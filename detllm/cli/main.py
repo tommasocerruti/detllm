@@ -486,6 +486,9 @@ def _run_generation(
                     "input_token_ids_hash": _hash_token_ids(item["input_ids"]),
                     "generated_token_ids": item["output_ids"],
                     "scores": item.get("scores"),
+                    "tokenizer_id": args.model,
+                    "decoding_max_new_tokens": args.max_new_tokens,
+                    "decoding_do_sample": False,
                 }
             )
     return rows

@@ -63,6 +63,32 @@ def diff_traces(
                 },
             )
 
+        if _field_mismatch(left, right, "tokenizer_id"):
+            return DiffResult(
+                status="FAIL",
+                category="TOKENIZATION_MISMATCH",
+                first_divergence={
+                    "index": idx,
+                    "reason": "tokenizer_id mismatch",
+                    "left_tokenizer_id": left.get("tokenizer_id"),
+                    "right_tokenizer_id": right.get("tokenizer_id"),
+                },
+            )
+
+        decoding_fields = ("decoding_max_new_tokens", "decoding_do_sample")
+        for field_name in decoding_fields:
+            if _field_mismatch(left, right, field_name):
+                return DiffResult(
+                    status="FAIL",
+                    category="GEN_CONTEXT_MISMATCH",
+                    first_divergence={
+                        "index": idx,
+                        "reason": f"{field_name} mismatch",
+                        "left_value": left.get(field_name),
+                        "right_value": right.get(field_name),
+                    },
+                )
+
         divergence = first_token_divergence(
             left.get("generated_token_ids", []),
             right.get("generated_token_ids", []),
@@ -113,6 +139,14 @@ def _first_score_divergence(
     if len(left_scores) != len(right_scores):
         return n
     return None
+
+
+def _field_mismatch(left: dict[str, Any], right: dict[str, Any], field: str) -> bool:
+    left_val = left.get(field)
+    right_val = right.get(field)
+    if left_val is None and right_val is None:
+        return False
+    return left_val != right_val
 
 
 def aggregate_diffs(diffs: Iterable[DiffResult]) -> DiffResult:
