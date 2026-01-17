@@ -1,4 +1,4 @@
-"""Artifact helpers for DetLLM."""
+"""Artifact helpers for detLLM."""
 
 from __future__ import annotations
 

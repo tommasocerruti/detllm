@@ -1,4 +1,4 @@
-"""Environment snapshot capture for DetLLM."""
+"""Environment snapshot capture for detLLM."""
 
 from __future__ import annotations
 

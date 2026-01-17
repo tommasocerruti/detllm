@@ -1,6 +1,6 @@
-# Contributing to DetLLM
+# Contributing to detLLM
 
-Thanks for your interest in DetLLM. This project is in early development; please keep changes small and focused.
+Thanks for your interest in detLLM. This project is in early development; please keep changes small and focused.
 
 ## Development setup
 

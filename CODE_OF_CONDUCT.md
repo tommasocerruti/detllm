@@ -1,6 +1,6 @@
 # Code of Conduct
 
-DetLLM is an open, respectful community. We expect all participants to:
+detLLM is an open, respectful community. We expect all participants to:
 
 - Be kind and professional.
 - Assume good intent.

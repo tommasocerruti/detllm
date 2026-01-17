@@ -1,1 +1,1 @@
-"""DetLLM package module."""
+"""detLLM package module."""

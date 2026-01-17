@@ -1,4 +1,4 @@
-"""DetLLM package."""
+"""detLLM package."""
 
 from detllm.api import check, run
 from detllm.core.env import capture_env
