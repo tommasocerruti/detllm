@@ -207,7 +207,12 @@ def main(argv: list[str] | None = None) -> int:
             backend = _build_backend(args)
             decision = evaluate_capabilities(ctx.applied, backend.capabilities(), args.tier, args.mode)
             if not decision.supported:
-                _write_unsupported(args.out, args.runs if hasattr(args, "runs") else 1, decision)
+                _write_unsupported(
+                    args.out,
+                    args.runs if hasattr(args, "runs") else 1,
+                    decision,
+                    validate_schema=args.validate_schema,
+                )
                 dump_json(
                     os.path.join(args.out, "determinism_applied.json"),
                     _coerce_determinism(ctx.applied.to_dict()),
@@ -274,9 +279,18 @@ def main(argv: list[str] | None = None) -> int:
             env_payload = _coerce_env(env_run)
             env_path = os.path.join(args.out, "envs", f"run_{run_idx}.json")
             os.makedirs(os.path.dirname(env_path), exist_ok=True)
+            if args.validate_schema:
+                validate_artifact(env_payload)
             dump_json(env_path, env_payload)
             if baseline_fingerprint and env_payload.get("fingerprint") != baseline_fingerprint:
-                _write_env_mismatch(args.out, args.runs, run_idx, baseline_fingerprint, env_payload)
+                _write_env_mismatch(
+                    args.out,
+                    args.runs,
+                    run_idx,
+                    baseline_fingerprint,
+                    env_payload,
+                    validate_schema=args.validate_schema,
+                )
                 return 0
             with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
                 backend = _build_backend(args)
@@ -284,7 +298,12 @@ def main(argv: list[str] | None = None) -> int:
                     ctx.applied, backend.capabilities(), args.tier, args.mode
                 )
                 if not decision.supported:
-                    _write_unsupported(args.out, args.runs, decision)
+                    _write_unsupported(
+                        args.out,
+                        args.runs,
+                        decision,
+                        validate_schema=args.validate_schema,
+                    )
                     dump_json(
                         os.path.join(args.out, "determinism_applied.json"),
                         _coerce_determinism(ctx.applied.to_dict()),
@@ -330,7 +349,11 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 batch_traces[batch_size] = trace_rows
                 trace_path = os.path.join(args.out, "traces", f"batch_{batch_size}.jsonl")
-                write_trace(trace_path, _coerce_trace_rows(trace_rows))
+                write_trace(
+                    trace_path,
+                    _coerce_trace_rows(trace_rows),
+                    validate_rows=args.validate_schema,
+                )
 
             # Compare against the baseline (fixed batch) trace only, not pairwise.
             batch_diffs = [
@@ -559,7 +582,7 @@ def _coerce_trace_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [TokenTraceRow.from_dict(row).to_dict() for row in rows]
 
 
-def _write_unsupported(out_dir: str, runs: int, decision) -> None:
+def _write_unsupported(out_dir: str, runs: int, decision, validate_schema: bool = False) -> None:
     report = Report(
         status="FAIL",
         category="UNSUPPORTED_REQUEST",
@@ -569,10 +592,10 @@ def _write_unsupported(out_dir: str, runs: int, decision) -> None:
             "notes": getattr(decision, "notes", []),
         },
     )
-    dump_json(
-        os.path.join(out_dir, "report.json"),
-        _wrap_artifact("report", report.to_dict()),
-    )
+    report_payload = _wrap_artifact("report", report.to_dict())
+    if validate_schema:
+        validate_artifact(report_payload)
+    dump_json(os.path.join(out_dir, "report.json"), report_payload)
     report_text = render_report(report)
     with open(os.path.join(out_dir, "report.txt"), "w", encoding="utf-8") as handle:
         handle.write(report_text)
@@ -584,6 +607,7 @@ def _write_env_mismatch(
     run_index: int,
     baseline_fingerprint: str,
     current_env: dict[str, Any],
+    validate_schema: bool = False,
 ) -> None:
     report = Report(
         status="FAIL",
@@ -595,10 +619,10 @@ def _write_env_mismatch(
             "current_fingerprint": current_env.get("fingerprint"),
         },
     )
-    dump_json(
-        os.path.join(out_dir, "report.json"),
-        _wrap_artifact("report", report.to_dict()),
-    )
+    report_payload = _wrap_artifact("report", report.to_dict())
+    if validate_schema:
+        validate_artifact(report_payload)
+    dump_json(os.path.join(out_dir, "report.json"), report_payload)
     report_text = render_report(report)
     with open(os.path.join(out_dir, "report.txt"), "w", encoding="utf-8") as handle:
         handle.write(report_text)

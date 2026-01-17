@@ -73,7 +73,9 @@ def run(
         backend_impl = backend_adapter or cli_main._build_backend(args)
         decision = evaluate_capabilities(ctx.applied, backend_impl.capabilities(), tier, mode)
         if not decision.supported:
-            cli_main._write_unsupported(out_dir, runs=1, decision=decision)
+            cli_main._write_unsupported(
+                out_dir, runs=1, decision=decision, validate_schema=validate_schema
+            )
             determinism_payload = _coerce_determinism(ctx.applied.to_dict())
             if validate_schema:
                 validate_artifact(determinism_payload)
@@ -175,13 +177,22 @@ def check(
         os.makedirs(os.path.dirname(env_path), exist_ok=True)
         dump_json(env_path, env_payload)
         if baseline_fingerprint and env_payload.get("fingerprint") != baseline_fingerprint:
-            cli_main._write_env_mismatch(out_dir, runs, run_idx, baseline_fingerprint, env_payload)
+            cli_main._write_env_mismatch(
+                out_dir,
+                runs,
+                run_idx,
+                baseline_fingerprint,
+                env_payload,
+                validate_schema=validate_schema,
+            )
             return Report(status="FAIL", category="ENV_MISMATCH", details={})
         with DeterministicContext(tier, mode, seed) as ctx:
             backend_impl = backend_adapter or cli_main._build_backend(args)
             decision = evaluate_capabilities(ctx.applied, backend_impl.capabilities(), tier, mode)
             if not decision.supported:
-                cli_main._write_unsupported(out_dir, runs=runs, decision=decision)
+                cli_main._write_unsupported(
+                    out_dir, runs=runs, decision=decision, validate_schema=validate_schema
+                )
                 determinism_payload = _coerce_determinism(ctx.applied.to_dict())
                 if validate_schema:
                     validate_artifact(determinism_payload)
