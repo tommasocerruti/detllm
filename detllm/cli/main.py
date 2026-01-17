@@ -12,7 +12,7 @@ from typing import Any
 from detllm.backends.base import BackendAdapter
 from detllm.backends.hf import HFBackend
 from detllm.backends.vllm import VLLMBackend
-from detllm.core.artifacts import dump_json, load_json
+from detllm.core.artifacts import dump_json, load_json, load_schema, validate_json
 from detllm.core.capabilities import evaluate_capabilities
 from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
@@ -106,6 +106,11 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default="artifacts/report.txt",
         help="Output text report path",
+    )
+    report_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate report.json against schema",
     )
 
     return parser
@@ -315,6 +320,8 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("--in is required for report")
 
         payload = load_json(args.report_in)
+        if args.validate_schema:
+            validate_json(payload, load_schema("report"))
         report = Report(
             status=payload["status"],
             category=payload["category"],

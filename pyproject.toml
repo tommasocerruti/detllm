@@ -27,6 +27,7 @@ detllm = "detllm.cli.main:main"
 test = ["pytest>=7.0"]
 hf = ["torch", "transformers"]
 vllm = ["vllm"]
+schema = ["jsonschema"]
 
 [tool.setuptools.packages.find]
 where = ["."]

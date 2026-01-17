@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "detLLM Report",
+  "type": "object",
+  "required": ["schema_version", "detllm_version", "artifact_type", "status", "category", "details"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "detllm_version": {"type": "string"},
+    "artifact_type": {"const": "report"},
+    "status": {"type": "string"},
+    "category": {"type": "string"},
+    "details": {"type": "object"}
+  },
+  "additionalProperties": true
+}

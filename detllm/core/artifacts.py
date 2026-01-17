@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import importlib.resources as resources
+
 REQUIRED_HEADER_FIELDS = {"schema_version", "detllm_version", "artifact_type"}
 
 
@@ -29,6 +31,16 @@ def dump_json(path: str, data: dict[str, Any]) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, sort_keys=True)
         f.write("\n")
+
+
+def load_schema(name: str) -> dict[str, Any]:
+    import json
+
+    schema_path = f"{name}.json"
+    with resources.files("detllm.schemas").joinpath(schema_path).open(
+        "r", encoding="utf-8"
+    ) as handle:
+        return json.load(handle)
 
 
 def validate_json(data: dict[str, Any], schema: dict[str, Any] | None) -> None:

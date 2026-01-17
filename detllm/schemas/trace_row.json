@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "detLLM TokenTraceRow",
+  "type": "object",
+  "required": ["prompt_id", "generated_token_ids"],
+  "properties": {
+    "prompt_id": {"type": "string"},
+    "input_token_ids": {"type": "array", "items": {"type": "integer"}},
+    "input_token_ids_hash": {"type": "string"},
+    "generated_token_ids": {"type": "array", "items": {"type": "integer"}},
+    "scores": {"type": ["array", "null"], "items": {"type": "number"}}
+  },
+  "additionalProperties": true
+}

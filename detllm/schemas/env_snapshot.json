@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "detLLM EnvSnapshot",
+  "type": "object",
+  "required": ["schema_version", "detllm_version", "artifact_type", "fingerprint"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "detllm_version": {"type": "string"},
+    "artifact_type": {"const": "env_snapshot"},
+    "fingerprint": {"type": "string"}
+  },
+  "additionalProperties": true
+}
