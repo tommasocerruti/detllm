@@ -7,10 +7,6 @@ from detllm import api
 
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.skipif(
-        os.environ.get("DETLLM_RUN_INTEGRATION") != "1",
-        reason="integration test disabled",
-    ),
 ]
 
 

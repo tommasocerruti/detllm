@@ -21,5 +21,3 @@ jobs:
           pytest -m "not integration"
       - name: Integration
         run: pytest -m integration
-        env:
-          DETLLM_RUN_INTEGRATION: "1"
