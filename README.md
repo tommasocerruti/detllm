@@ -2,9 +2,8 @@
   <img src="detLLM_logo.png" alt="detLLM logo" width="320" />
 </p>
 
-<h1 align="center">detLLM</h1>
 
-<p align="center"><em>Deterministic and verifiable LLM inference</em></p>
+<p align="center"><b><em>Deterministic and verifiable LLM inference</em></b></p>
 
 
 
