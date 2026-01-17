@@ -32,6 +32,8 @@ See [docs/verification.md](docs/verification.md) for the full local verification
 
 Tier 1 guarantees repeatability only for a fixed batch size; batch invariance is measured separately.
 
+Tier 2 scores are captured when the backend supports stable score/logprob output. See `docs/verification.md` for how to verify scores appear in traces.
+
 ## Artifacts (minimal repro pack)
 
 Each run writes an `artifacts/<run_id>/` folder:
