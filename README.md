@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="detLLM_logo.png" alt="detLLM logo" width="420" />
+  <img src="https://raw.githubusercontent.com/tommasocerruti/detllm/main/detLLM_logo.png" alt="detLLM logo" width="420" />
 </p>
 
 
@@ -23,19 +23,19 @@ detLLM verifies reproducibility for LLM inference and produces a minimal repro p
 ## Demo
 
 <p align="center">
-  <img src="demo.gif" alt="detLLM demo" width="760" />
+  <img src="https://raw.githubusercontent.com/tommasocerruti/detllm/main/demo.gif" alt="detLLM demo" width="760" />
 </p>
 
 ## Quickstart
 
 ```bash
-pip install -e .
+pip install detllm
 detllm check --backend hf --model <model_id> \
   --prompt "Choose one: A or B. Answer with a single letter." \
   --tier 1 --runs 5 --batch-size 1
 ```
 
-Note: some shells (like zsh) require quotes when installing extras, e.g. `pip install -e '.[test]'`.
+Note: some shells (like zsh) require quotes when installing extras, e.g. `pip install 'detllm[test,hf]'`.
 
 ## Verification
 
