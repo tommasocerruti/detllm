@@ -34,3 +34,14 @@ def test_hf_tier2_scores_present(tmp_path):
     trace_path = tmp_path / "out_t2" / "traces" / "run_0.jsonl"
     content = trace_path.read_text(encoding="utf-8").strip()
     assert "\"scores\"" in content
+
+
+def test_hf_check_second_model(tmp_path):
+    report = api.check(
+        backend="hf",
+        model="hf-internal-testing/tiny-random-gpt2",
+        prompts=["Hello"],
+        runs=1,
+        out_dir=str(tmp_path / "out_tiny_random"),
+    )
+    assert report.status in {"PASS", "FAIL"}
