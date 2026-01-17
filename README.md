@@ -39,6 +39,31 @@ Each run writes an `artifacts/<run_id>/` folder:
 - `report.json` + `report.txt`
 - `diffs/first_divergence.json`
 
+## Python API
+
+```python
+from detllm import check, run
+
+run(
+    backend="hf",
+    model="distilgpt2",
+    prompts=["Hello"],
+    tier=1,
+    out_dir="artifacts/run1",
+)
+
+report = check(
+    backend="hf",
+    model="distilgpt2",
+    prompts=["Hello"],
+    runs=3,
+    batch_size=1,
+    out_dir="artifacts/check1",
+)
+
+print(report.status, report.category)
+```
+
 ## CLI (planned)
 
 - `detllm env`
