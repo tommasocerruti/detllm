@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="detLLM_logo.png" alt="detLLM logo" width="320" />
+  <img src="detLLM_logo.png" alt="detLLM logo" width="420" />
 </p>
 
 
@@ -18,20 +18,15 @@
 
 ## About
 
-detLLM helps you verify whether an LLM inference setup is reproducible and gives you a minimal repro pack when it is not. It measures variance across repeated runs and across batch sizes, and explains divergences without overpromising.
-
-## Known limitations
-
-- GPU determinism is conditional; results can change across drivers/kernels.
-- Batch invariance is not guaranteed; it is measured separately.
-- Strict guarantees depend on backend capabilities.
-- Distributed/multiprocess inference is out of scope for now.
+detLLM verifies reproducibility for LLM inference and produces a minimal repro pack when outputs diverge. It measures run-to-run variance and batch-size variance, and reports results with explicit, capability-gated guarantees (only claimed when the backend can actually enforce them).
 
 ## Quickstart
 
 ```bash
 pip install -e .
-detllm check --backend hf --model <model_id> --prompt "Hello" --tier 1 --runs 5 --batch-size 1
+detllm check --backend hf --model <model_id> \
+  --prompt "Choose one: A or B. Answer with a single letter." \
+  --tier 1 --runs 5 --batch-size 1
 ```
 
 Note: some shells (like zsh) require quotes when installing extras, e.g. `pip install -e '.[test]'`.
@@ -93,6 +88,13 @@ print(report.status, report.category)
 - `detllm check`
 - `detllm diff`
 - `detllm report`
+
+## Known limitations
+
+- GPU determinism is conditional; results can change across drivers/kernels.
+- Batch invariance is not guaranteed; it is measured separately.
+- Strict guarantees depend on backend capabilities.
+- Distributed/multiprocess inference is out of scope for now.
 
 ## Docs
 
