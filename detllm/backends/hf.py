@@ -45,16 +45,21 @@ class HFBackend(BackendAdapter):
     def capabilities(self) -> BackendCapabilities:
         return BackendCapabilities(
             supports_tier1_fixed_batch=True,
-            supports_scores=False,
+            supports_scores=True,
             supports_torch_deterministic=True,
             # TODO: Add score/logprob capture support for Tier 2 when available.
             notes=["CPU-only deterministic controls are best-effort."],
         )
 
     def generate(
-        self, prompts: list[str], max_new_tokens: int = 32, do_sample: bool = False
+        self,
+        prompts: list[str],
+        max_new_tokens: int = 32,
+        do_sample: bool = False,
+        capture_scores: bool = False,
     ) -> list[dict[str, Any]]:
         import torch
+        import torch.nn.functional as torch_f
 
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("HF backend not initialized.")
@@ -67,17 +72,50 @@ class HFBackend(BackendAdapter):
                 **inputs,
                 max_new_tokens=max_new_tokens,
                 do_sample=do_sample,
+                output_scores=capture_scores,
+                return_dict_in_generate=capture_scores,
             )
+
+        if capture_scores:
+            sequences = outputs.sequences
+            score_tensors = outputs.scores
+        else:
+            sequences = outputs
+            score_tensors = None
 
         results: list[dict[str, Any]] = []
         for i, prompt in enumerate(prompts):
+            scores = None
+            if capture_scores and score_tensors is not None:
+                input_len = int(inputs["attention_mask"][i].sum().item())
+                scores = _token_logprobs(
+                    sequences[i],
+                    input_len,
+                    score_tensors,
+                    i,
+                    torch_f,
+                )
             results.append(
                 {
                     "prompt": prompt,
                     "input_ids": inputs["input_ids"][i].tolist(),
-                    "output_ids": outputs[i].tolist(),
-                    # TODO: Add score/logprob capture when HF provides stable APIs.
-                    "scores": None,
+                    "output_ids": sequences[i].tolist(),
+                    "scores": scores,
                 }
             )
         return results
+
+
+def _token_logprobs(
+    sequence: torch.Tensor,
+    input_len: int,
+    score_tensors: list[torch.Tensor],
+    batch_index: int,
+    torch_f,
+) -> list[float]:
+    logprobs: list[float] = []
+    for step, scores in enumerate(score_tensors):
+        token_id = int(sequence[input_len + step].item())
+        log_probs = torch_f.log_softmax(scores[batch_index], dim=-1)
+        logprobs.append(float(log_probs[token_id].item()))
+    return logprobs

@@ -135,7 +135,9 @@ def main(argv: list[str] | None = None) -> int:
                     _wrap_artifact("determinism_applied", ctx.applied.to_dict()),
                 )
                 return 2
-            trace_rows = _run_generation(backend, prompts, args)
+            trace_rows = _run_generation(
+                backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
+            )
 
         dump_json(
             os.path.join(args.out, "determinism_applied.json"),
@@ -188,7 +190,9 @@ def main(argv: list[str] | None = None) -> int:
                         _wrap_artifact("determinism_applied", ctx.applied.to_dict()),
                     )
                     return 2
-                trace_rows = _run_generation(backend, prompts, args)
+                trace_rows = _run_generation(
+                    backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
+                )
 
             traces.append(trace_rows)
             determinism_rows.append(_wrap_artifact("determinism_applied", ctx.applied.to_dict()))
@@ -215,7 +219,12 @@ def main(argv: list[str] | None = None) -> int:
                 batch_args = _clone_args(args, batch_size=batch_size)
                 with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
                     backend = _build_backend(batch_args)
-                    trace_rows = _run_generation(backend, prompts, batch_args)
+                    trace_rows = _run_generation(
+                        backend,
+                        prompts,
+                        batch_args,
+                        capture_scores=ctx.applied.tier_effective >= 2,
+                    )
                 batch_traces[batch_size] = trace_rows
                 trace_path = os.path.join(args.out, "traces", f"batch_{batch_size}.jsonl")
                 write_trace(trace_path, trace_rows)
@@ -334,12 +343,22 @@ def _hash_token_ids(token_ids: list[int]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _run_generation(backend: HFBackend, prompts: list[str], args: argparse.Namespace) -> list[dict[str, Any]]:
+def _run_generation(
+    backend: BackendAdapter,
+    prompts: list[str],
+    args: argparse.Namespace,
+    capture_scores: bool = False,
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     batch_size = max(1, args.batch_size)
     for start in range(0, len(prompts), batch_size):
         batch = prompts[start : start + batch_size]
-        results = backend.generate(batch, max_new_tokens=args.max_new_tokens, do_sample=False)
+        results = backend.generate(
+            batch,
+            max_new_tokens=args.max_new_tokens,
+            do_sample=False,
+            capture_scores=capture_scores,
+        )
         for item in results:
             rows.append(
                 {
