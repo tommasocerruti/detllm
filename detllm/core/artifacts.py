@@ -7,6 +7,12 @@ from typing import Any
 import importlib.resources as resources
 
 REQUIRED_HEADER_FIELDS = {"schema_version", "detllm_version", "artifact_type"}
+SCHEMA_MAP = {
+    "env_snapshot": "env_snapshot",
+    "run_config": "run_config",
+    "determinism_applied": "determinism_applied",
+    "report": "report",
+}
 
 
 def load_json(path: str) -> dict[str, Any]:
@@ -51,3 +57,11 @@ def validate_json(data: dict[str, Any], schema: dict[str, Any] | None) -> None:
     except Exception as exc:
         raise RuntimeError("jsonschema is required for schema validation") from exc
     jsonschema.validate(instance=data, schema=schema)
+
+
+def validate_artifact(data: dict[str, Any]) -> None:
+    artifact_type = data.get("artifact_type")
+    schema_name = SCHEMA_MAP.get(artifact_type)
+    if not schema_name:
+        return
+    validate_json(data, load_schema(schema_name))

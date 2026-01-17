@@ -12,7 +12,13 @@ from typing import Any
 from detllm.backends.base import BackendAdapter
 from detllm.backends.hf import HFBackend
 from detllm.backends.vllm import VLLMBackend
-from detllm.core.artifacts import dump_json, load_json, load_schema, validate_json
+from detllm.core.artifacts import (
+    dump_json,
+    load_json,
+    load_schema,
+    validate_artifact,
+    validate_json,
+)
 from detllm.core.capabilities import evaluate_capabilities
 from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
@@ -51,6 +57,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Environment variable name to redact (repeatable)",
     )
+    env_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate output artifacts against schemas",
+    )
 
     run_parser = subparsers.add_parser("run", help="Run a single inference and emit artifacts")
     run_parser.add_argument("--backend", required=False, default="hf", help="Backend adapter")
@@ -85,6 +96,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="Environment variable name to redact (repeatable)",
+    )
+    run_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate output artifacts against schemas",
     )
 
     check_parser = subparsers.add_parser("check", help="Repeat runs and measure variance")
@@ -122,6 +138,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Environment variable name to redact (repeatable)",
     )
+    check_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate output artifacts against schemas",
+    )
 
     diff_parser = subparsers.add_parser("diff", help="Diff traces and emit a report")
     diff_parser.add_argument("--left", required=False, help="Left trace file (jsonl)")
@@ -131,6 +152,11 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default="artifacts/diff",
         help="Output directory for diff artifacts",
+    )
+    diff_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate output artifacts against schemas",
     )
     report_parser = subparsers.add_parser("report", help="Render report artifacts")
     report_parser.add_argument("--in", dest="report_in", required=False, help="Input report.json")
@@ -155,6 +181,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "env":
         snapshot = capture_env(**_redact_kwargs(args))
+        if args.validate_schema:
+            validate_artifact(snapshot)
         dump_json(args.out, snapshot)
         return 0
 
@@ -168,6 +196,8 @@ def main(argv: list[str] | None = None) -> int:
 
         os.makedirs(args.out, exist_ok=True)
         env_snapshot = capture_env(**_redact_kwargs(args))
+        if args.validate_schema:
+            validate_artifact(env_snapshot)
         dump_json(os.path.join(args.out, "env.json"), env_snapshot)
 
         with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
@@ -184,18 +214,20 @@ def main(argv: list[str] | None = None) -> int:
                 backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
             )
 
-        dump_json(
-            os.path.join(args.out, "determinism_applied.json"),
-            _wrap_artifact("determinism_applied", ctx.applied.to_dict()),
-        )
+        determinism_payload = _wrap_artifact("determinism_applied", ctx.applied.to_dict())
+        if args.validate_schema:
+            validate_artifact(determinism_payload)
+        dump_json(os.path.join(args.out, "determinism_applied.json"), determinism_payload)
         run_config = _build_run_config(
             args,
             env_snapshot.get("device"),
             ctx.applied.tier_effective,
             _parse_vary_batch(getattr(args, "vary_batch", None)),
         )
+        if args.validate_schema:
+            validate_artifact(run_config)
         dump_json(os.path.join(args.out, "run_config.json"), run_config)
-        write_trace(os.path.join(args.out, "trace.jsonl"), trace_rows)
+        write_trace(os.path.join(args.out, "trace.jsonl"), trace_rows, validate_rows=args.validate_schema)
         return 0
 
     if args.command == "check":
@@ -208,6 +240,8 @@ def main(argv: list[str] | None = None) -> int:
 
         os.makedirs(args.out, exist_ok=True)
         env_snapshot = capture_env(**_redact_kwargs(args))
+        if args.validate_schema:
+            validate_artifact(env_snapshot)
         dump_json(os.path.join(args.out, "env.json"), env_snapshot)
 
         vary_batch_sizes = _parse_vary_batch(args.vary_batch)
@@ -217,6 +251,8 @@ def main(argv: list[str] | None = None) -> int:
             tier_effective=args.tier,
             vary_batch=vary_batch_sizes,
         )
+        if args.validate_schema:
+            validate_artifact(run_config)
         dump_json(os.path.join(args.out, "run_config.json"), run_config)
 
         traces: list[list[dict[str, Any]]] = []
@@ -251,13 +287,12 @@ def main(argv: list[str] | None = None) -> int:
             determinism_rows.append(_wrap_artifact("determinism_applied", ctx.applied.to_dict()))
             trace_path = os.path.join(args.out, "traces", f"run_{run_idx}.jsonl")
             os.makedirs(os.path.dirname(trace_path), exist_ok=True)
-            write_trace(trace_path, trace_rows)
+            write_trace(trace_path, trace_rows, validate_rows=args.validate_schema)
 
         # Determinism controls are expected to be stable across runs; record first run only.
-        dump_json(
-            os.path.join(args.out, "determinism_applied.json"),
-            determinism_rows[0],
-        )
+        if args.validate_schema:
+            validate_artifact(determinism_rows[0])
+        dump_json(os.path.join(args.out, "determinism_applied.json"), determinism_rows[0])
 
         diffs = [
             diff_traces(traces[0], traces[i]) for i in range(1, len(traces))
@@ -299,10 +334,10 @@ def main(argv: list[str] | None = None) -> int:
                 "batch_divergence": _batch_divergence_detail(batch_diffs, result),
             },
         )
-        dump_json(
-            os.path.join(args.out, "report.json"),
-            _wrap_artifact("report", report.to_dict()),
-        )
+        report_payload = _wrap_artifact("report", report.to_dict())
+        if args.validate_schema:
+            validate_artifact(report_payload)
+        dump_json(os.path.join(args.out, "report.json"), report_payload)
         report_text = render_report(report)
         with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
             handle.write(report_text)
@@ -332,10 +367,10 @@ def main(argv: list[str] | None = None) -> int:
                 "first_divergence": result.first_divergence,
             },
         )
-        dump_json(
-            os.path.join(args.out, "report.json"),
-            _wrap_artifact("report", report.to_dict()),
-        )
+        report_payload = _wrap_artifact("report", report.to_dict())
+        if args.validate_schema:
+            validate_artifact(report_payload)
+        dump_json(os.path.join(args.out, "report.json"), report_payload)
         report_text = render_report(report)
         with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
             handle.write(report_text)
