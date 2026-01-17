@@ -70,7 +70,11 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--tier", type=int, default=1, help="Determinism tier")
     check_parser.add_argument("--batch-size", type=int, default=1, help="Batch size")
     check_parser.add_argument("--runs", type=int, default=3, help="Number of runs")
-    check_parser.add_argument("--vary-batch", required=False, help="Comma-separated batch sizes")
+    check_parser.add_argument(
+        "--vary-batch",
+        required=False,
+        help="Comma-separated batch sizes to measure batch variance",
+    )
     check_parser.add_argument("--seed", type=int, default=0, help="Seed for determinism controls")
     check_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
     check_parser.add_argument("--dtype", default="float32", help="Model dtype")
@@ -139,10 +143,12 @@ def main(argv: list[str] | None = None) -> int:
         env_snapshot = capture_env()
         dump_json(os.path.join(args.out, "env.json"), env_snapshot)
 
+        vary_batch_sizes = _parse_vary_batch(args.vary_batch)
         run_config = _build_run_config(
             args,
             env_snapshot.get("device"),
             tier_effective=args.tier,
+            vary_batch=vary_batch_sizes,
         )
         dump_json(os.path.join(args.out, "run_config.json"), run_config)
 
@@ -170,13 +176,34 @@ def main(argv: list[str] | None = None) -> int:
             diff_traces(traces[0], traces[i]) for i in range(1, len(traces))
         ]
         result = aggregate_diffs(diffs)
-        # TODO: Extend categories for batch variance and score variance in future milestones.
+
+        batch_result = None
+        batch_traces: dict[int, list[dict[str, Any]]] = {}
+        if vary_batch_sizes:
+            for batch_size in vary_batch_sizes:
+                batch_args = _clone_args(args, batch_size=batch_size)
+                with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
+                    backend = _build_backend(batch_args)
+                    trace_rows = _run_generation(backend, prompts, batch_args)
+                batch_traces[batch_size] = trace_rows
+                trace_path = os.path.join(args.out, "traces", f"batch_{batch_size}.jsonl")
+                write_trace(trace_path, trace_rows)
+
+            # Compare against the baseline (fixed batch) trace only, not pairwise.
+            batch_diffs = [
+                (size, diff_traces(traces[0], batch_traces[size]))
+                for size in vary_batch_sizes
+            ]
+            batch_result = aggregate_diffs([diff for _, diff in batch_diffs])
+
         report = Report(
-            status=result.status,
-            category=result.category,
+            status=_report_status(result, batch_result),
+            category=_report_category(result, batch_result),
             details={
                 "runs": args.runs,
-                "first_divergence": result.first_divergence,
+                "batch_sizes": vary_batch_sizes,
+                "first_divergence": _report_divergence(result, batch_result),
+                "batch_divergence": _batch_divergence_detail(batch_diffs, result),
             },
         )
         dump_json(
@@ -187,9 +214,12 @@ def main(argv: list[str] | None = None) -> int:
         with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
             handle.write(report_text)
 
-        if result.first_divergence is not None:
+        if _report_divergence(result, batch_result) is not None:
             diff_path = os.path.join(args.out, "diffs", "first_divergence.json")
-            dump_json(diff_path, _wrap_artifact("first_divergence", result.first_divergence))
+            dump_json(
+                diff_path,
+                _wrap_artifact("first_divergence", _report_divergence(result, batch_result)),
+            )
 
         return 0
 
@@ -262,6 +292,7 @@ def _build_run_config(
     args: argparse.Namespace,
     device_snapshot: dict[str, Any] | None,
     tier_effective: int,
+    vary_batch: list[int],
 ) -> dict[str, Any]:
     data = {
         "backend": args.backend,
@@ -276,6 +307,7 @@ def _build_run_config(
             "do_sample": False,
         },
         "batch_size": args.batch_size,
+        "vary_batch": vary_batch,
         "tokenizer": {
             "id": args.model,
             # TODO: Capture tokenizer revision + class metadata.
@@ -294,6 +326,63 @@ def _wrap_artifact(artifact_type: str, payload: dict[str, Any]) -> dict[str, Any
         "artifact_type": artifact_type,
         **payload,
     }
+
+
+def _parse_vary_batch(value: str | None) -> list[int]:
+    if not value:
+        return []
+    sizes: list[int] = []
+    for item in value.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        size = int(item)
+        if size <= 0:
+            raise ValueError("Batch sizes must be positive integers")
+        sizes.append(size)
+    return sizes
+
+
+def _clone_args(args: argparse.Namespace, batch_size: int) -> argparse.Namespace:
+    data = vars(args).copy()
+    data["batch_size"] = batch_size
+    return argparse.Namespace(**data)
+
+
+def _report_status(result, batch_result) -> str:
+    if result.status != "PASS":
+        return result.status
+    if batch_result and batch_result.status != "PASS":
+        return "FAIL"
+    return "PASS"
+
+
+def _report_category(result, batch_result) -> str:
+    if result.status != "PASS":
+        return result.category
+    if batch_result and batch_result.status != "PASS":
+        return "BATCH_VARIANCE"
+    return "PASS"
+
+
+def _report_divergence(result, batch_result):
+    if result.status != "PASS":
+        return result.first_divergence
+    if batch_result and batch_result.status != "PASS":
+        return batch_result.first_divergence
+    return None
+
+
+def _batch_divergence_detail(batch_diffs, run_result):
+    if run_result.status != "PASS":
+        return None
+    for batch_size, diff in batch_diffs:
+        if diff.status != "PASS":
+            return {
+                "batch_size": batch_size,
+                "first_divergence": diff.first_divergence,
+            }
+    return None
 
 
 if __name__ == "__main__":
