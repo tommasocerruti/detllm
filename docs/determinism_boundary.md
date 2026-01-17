@@ -1,6 +1,6 @@
 # Determinism boundary
 
-This document describes determinism boundaries for DetLLM tiers and why GPU determinism is conditional.
+This document describes determinism boundaries for detLLM tiers and why GPU determinism is conditional.
 
 ## Tier 1: fixed batch only
 

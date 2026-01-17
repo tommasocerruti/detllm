@@ -1,7 +1,11 @@
-# DetLLM
-DetLLM helps you verify whether an LLM inference setup is reproducible and gives you a minimal repro pack when it is not.
+# detLLM
+detLLM helps you verify whether an LLM inference setup is reproducible and gives you a minimal repro pack when it is not.
 
-DetLLM measures variance across repeated runs and across batch sizes, and explains divergences without overpromising.
+detLLM measures variance across repeated runs and across batch sizes, and explains divergences without overpromising.
+
+TODO: Add logo wordmark.
+TODO: Add demo GIF.
+TODO: Add badges (CI, license, version).
 
 ## Quickstart
 

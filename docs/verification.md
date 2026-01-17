@@ -1,6 +1,6 @@
 # Verification (local)
 
-This short guide validates that DetLLM works end-to-end on CPU using a small HF model.
+This short guide validates that detLLM works end-to-end on CPU using a small HF model.
 
 ```bash
 python -m venv .venv
