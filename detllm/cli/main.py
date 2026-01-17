@@ -22,6 +22,7 @@ from detllm.core.artifacts import (
 from detllm.core.capabilities import evaluate_capabilities
 from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
+from detllm.core.models import DeterminismAppliedRecord, EnvSnapshot, RunConfig, TokenTraceRow
 from detllm.diff.diff import aggregate_diffs, diff_traces
 from detllm.report.render_text import render_report
 from detllm.report.report import Report
@@ -181,9 +182,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "env":
         snapshot = capture_env(**_redact_kwargs(args))
+        env_payload = _coerce_env(snapshot)
         if args.validate_schema:
-            validate_artifact(snapshot)
-        dump_json(args.out, snapshot)
+            validate_artifact(env_payload)
+        dump_json(args.out, env_payload)
         return 0
 
     if args.command == "run":
@@ -196,9 +198,10 @@ def main(argv: list[str] | None = None) -> int:
 
         os.makedirs(args.out, exist_ok=True)
         env_snapshot = capture_env(**_redact_kwargs(args))
+        env_payload = _coerce_env(env_snapshot)
         if args.validate_schema:
-            validate_artifact(env_snapshot)
-        dump_json(os.path.join(args.out, "env.json"), env_snapshot)
+            validate_artifact(env_payload)
+        dump_json(os.path.join(args.out, "env.json"), env_payload)
 
         with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
             backend = _build_backend(args)
@@ -207,14 +210,14 @@ def main(argv: list[str] | None = None) -> int:
                 _write_unsupported(args.out, args.runs if hasattr(args, "runs") else 1, decision)
                 dump_json(
                     os.path.join(args.out, "determinism_applied.json"),
-                    _wrap_artifact("determinism_applied", ctx.applied.to_dict()),
+                    _coerce_determinism(ctx.applied.to_dict()),
                 )
                 return 2
             trace_rows = _run_generation(
                 backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
             )
 
-        determinism_payload = _wrap_artifact("determinism_applied", ctx.applied.to_dict())
+        determinism_payload = _coerce_determinism(ctx.applied.to_dict())
         if args.validate_schema:
             validate_artifact(determinism_payload)
         dump_json(os.path.join(args.out, "determinism_applied.json"), determinism_payload)
@@ -224,10 +227,15 @@ def main(argv: list[str] | None = None) -> int:
             ctx.applied.tier_effective,
             _parse_vary_batch(getattr(args, "vary_batch", None)),
         )
+        run_config = _coerce_run_config(run_config)
         if args.validate_schema:
             validate_artifact(run_config)
         dump_json(os.path.join(args.out, "run_config.json"), run_config)
-        write_trace(os.path.join(args.out, "trace.jsonl"), trace_rows, validate_rows=args.validate_schema)
+        write_trace(
+            os.path.join(args.out, "trace.jsonl"),
+            _coerce_trace_rows(trace_rows),
+            validate_rows=args.validate_schema,
+        )
         return 0
 
     if args.command == "check":
@@ -240,9 +248,10 @@ def main(argv: list[str] | None = None) -> int:
 
         os.makedirs(args.out, exist_ok=True)
         env_snapshot = capture_env(**_redact_kwargs(args))
+        env_payload = _coerce_env(env_snapshot)
         if args.validate_schema:
-            validate_artifact(env_snapshot)
-        dump_json(os.path.join(args.out, "env.json"), env_snapshot)
+            validate_artifact(env_payload)
+        dump_json(os.path.join(args.out, "env.json"), env_payload)
 
         vary_batch_sizes = _parse_vary_batch(args.vary_batch)
         run_config = _build_run_config(
@@ -251,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
             tier_effective=args.tier,
             vary_batch=vary_batch_sizes,
         )
+        run_config = _coerce_run_config(run_config)
         if args.validate_schema:
             validate_artifact(run_config)
         dump_json(os.path.join(args.out, "run_config.json"), run_config)
@@ -261,11 +271,12 @@ def main(argv: list[str] | None = None) -> int:
         # TODO: Consider reusing the backend per run for speed; per-run reloads isolate state.
         for run_idx in range(args.runs):
             env_run = capture_env(**_redact_kwargs(args))
+            env_payload = _coerce_env(env_run)
             env_path = os.path.join(args.out, "envs", f"run_{run_idx}.json")
             os.makedirs(os.path.dirname(env_path), exist_ok=True)
-            dump_json(env_path, env_run)
-            if baseline_fingerprint and env_run.get("fingerprint") != baseline_fingerprint:
-                _write_env_mismatch(args.out, args.runs, run_idx, baseline_fingerprint, env_run)
+            dump_json(env_path, env_payload)
+            if baseline_fingerprint and env_payload.get("fingerprint") != baseline_fingerprint:
+                _write_env_mismatch(args.out, args.runs, run_idx, baseline_fingerprint, env_payload)
                 return 0
             with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
                 backend = _build_backend(args)
@@ -276,7 +287,7 @@ def main(argv: list[str] | None = None) -> int:
                     _write_unsupported(args.out, args.runs, decision)
                     dump_json(
                         os.path.join(args.out, "determinism_applied.json"),
-                        _wrap_artifact("determinism_applied", ctx.applied.to_dict()),
+                        _coerce_determinism(ctx.applied.to_dict()),
                     )
                     return 2
                 trace_rows = _run_generation(
@@ -284,10 +295,14 @@ def main(argv: list[str] | None = None) -> int:
                 )
 
             traces.append(trace_rows)
-            determinism_rows.append(_wrap_artifact("determinism_applied", ctx.applied.to_dict()))
+            determinism_rows.append(_coerce_determinism(ctx.applied.to_dict()))
             trace_path = os.path.join(args.out, "traces", f"run_{run_idx}.jsonl")
             os.makedirs(os.path.dirname(trace_path), exist_ok=True)
-            write_trace(trace_path, trace_rows, validate_rows=args.validate_schema)
+            write_trace(
+                trace_path,
+                _coerce_trace_rows(trace_rows),
+                validate_rows=args.validate_schema,
+            )
 
         # Determinism controls are expected to be stable across runs; record first run only.
         if args.validate_schema:
@@ -315,7 +330,7 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 batch_traces[batch_size] = trace_rows
                 trace_path = os.path.join(args.out, "traces", f"batch_{batch_size}.jsonl")
-                write_trace(trace_path, trace_rows)
+                write_trace(trace_path, _coerce_trace_rows(trace_rows))
 
             # Compare against the baseline (fixed batch) trace only, not pairwise.
             batch_diffs = [
@@ -521,6 +536,24 @@ def _redact_kwargs(args: argparse.Namespace) -> dict[str, Any]:
         "redact": getattr(args, "redact_env", False),
         "redact_env_vars": getattr(args, "redact_env_var", []),
     }
+
+
+def _coerce_env(payload: dict[str, Any]) -> dict[str, Any]:
+    return EnvSnapshot.from_dict(payload).to_dict()
+
+
+def _coerce_run_config(payload: dict[str, Any]) -> dict[str, Any]:
+    return RunConfig.from_dict(payload).to_dict()
+
+
+def _coerce_determinism(payload: dict[str, Any]) -> dict[str, Any]:
+    if "schema_version" not in payload:
+        payload = _wrap_artifact("determinism_applied", payload)
+    return DeterminismAppliedRecord.from_dict(payload).to_dict()
+
+
+def _coerce_trace_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [TokenTraceRow.from_dict(row).to_dict() for row in rows]
 
 
 def _write_unsupported(out_dir: str, runs: int, decision) -> None:
