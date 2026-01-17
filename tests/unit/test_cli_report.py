@@ -24,6 +24,7 @@ def test_cli_report_renders_text(tmp_path):
             sys.executable,
             "-m",
             "detllm.cli.main",
+            "--quiet",
             "report",
             "--in",
             str(report_path),

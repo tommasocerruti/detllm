@@ -24,6 +24,7 @@ def test_cli_diff_writes_report(tmp_path):
             sys.executable,
             "-m",
             "detllm.cli.main",
+            "--quiet",
             "diff",
             "--left",
             str(left),

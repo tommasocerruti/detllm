@@ -19,7 +19,15 @@ def test_capture_env_includes_header_and_fingerprint():
 def test_cli_env_writes_file(tmp_path):
     out_path = tmp_path / "env.json"
     result = subprocess.run(
-        [sys.executable, "-m", "detllm.cli.main", "env", "--out", str(out_path)],
+        [
+            sys.executable,
+            "-m",
+            "detllm.cli.main",
+            "--quiet",
+            "env",
+            "--out",
+            str(out_path),
+        ],
         check=True,
         capture_output=True,
         text=True,
