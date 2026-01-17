@@ -85,3 +85,4 @@ This repo is a WIP skeleton for the Milestone 0 deliverables:
 - [docs/verification.md](docs/verification.md)
 - [docs/determinism_boundary.md](docs/determinism_boundary.md)
 - [docs/troubleshooting.md](docs/troubleshooting.md)
+- [docs/vllm.md](docs/vllm.md)

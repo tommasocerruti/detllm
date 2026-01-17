@@ -9,10 +9,12 @@ def test_capability_strict_rejects_missing_scores():
         supports_tier1_fixed_batch=True,
         supports_scores=False,
         supports_torch_deterministic=True,
+        notes=["score support missing"],
     )
     decision = evaluate_capabilities(applied, caps, tier_requested=2, mode="strict")
     assert decision.supported is False
     assert decision.capability_failures
+    assert decision.notes == ["score support missing"]
 
 
 def test_capability_best_effort_downgrades():

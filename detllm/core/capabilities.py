@@ -14,6 +14,7 @@ class CapabilityDecision:
     supported: bool
     tier_effective: int
     capability_failures: list[dict[str, Any]]
+    notes: list[str]
 
 
 def evaluate_capabilities(
@@ -23,6 +24,7 @@ def evaluate_capabilities(
     mode: str,
 ) -> CapabilityDecision:
     failures: list[dict[str, Any]] = []
+    notes = list(capabilities.notes)
     tier_effective = tier_requested
 
     if tier_requested >= 1 and not capabilities.supports_torch_deterministic:
@@ -60,6 +62,7 @@ def evaluate_capabilities(
                 supported=False,
                 tier_effective=tier_effective,
                 capability_failures=failures,
+                notes=notes,
             )
 
         if tier_effective < tier_requested:
@@ -76,4 +79,5 @@ def evaluate_capabilities(
         supported=True,
         tier_effective=applied.tier_effective,
         capability_failures=failures,
+        notes=notes,
     )

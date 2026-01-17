@@ -495,6 +495,7 @@ def _write_unsupported(out_dir: str, runs: int, decision) -> None:
         details={
             "runs": runs,
             "capability_failures": decision.capability_failures,
+            "notes": getattr(decision, "notes", []),
         },
     )
     dump_json(
