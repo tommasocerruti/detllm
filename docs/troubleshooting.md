@@ -35,3 +35,11 @@ Likely causes:
 
 Next actions:
 - Switch to best-effort mode or use a backend with stronger determinism support.
+
+## Redaction and schema validation
+
+If artifacts contain sensitive fields:
+- Use `--redact-env` or `--redact-env-var` when running `env`, `run`, or `check`.
+
+If schema validation fails:
+- Install the optional `schema` extra and rerun `detllm report --validate-schema`.

@@ -41,3 +41,12 @@ After `detllm check`:
 - `details.batch_divergence`: which batch size diverged (if any).
 
 If `status` is PASS, the outputs were identical across runs and (if requested) across batch sizes.
+
+## Privacy and schema validation
+
+Redaction flags (CLI):
+- `--redact-env` redacts common environment fields.
+- `--redact-env-var NAME` redacts specific environment variables (repeatable).
+
+Schema validation (CLI):
+- `detllm report --validate-schema` validates `report.json` against the JSON schema.
