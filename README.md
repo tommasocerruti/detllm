@@ -10,6 +10,12 @@ pip install -e .
 detllm check --backend hf --model <model_id> --prompt "Hello" --tier 1 --runs 5 --batch-size 1
 ```
 
+Note: some shells (like zsh) require quotes when installing extras, e.g. `pip install -e '.[test]'`.
+
+## Verification
+
+See [docs/verification.md](docs/verification.md) for the full local verification procedure and expected outputs.
+
 ## Tiers
 
 - Tier 0: artifacts + deterministic diff/report (no equality guarantees)
@@ -44,3 +50,9 @@ This repo is a WIP skeleton for the Milestone 0 deliverables:
 - Packaging + CLI entrypoint
 - CI + tests
 - Base docs (LICENSE, CONTRIBUTING, CODE_OF_CONDUCT)
+
+## Docs
+
+- [docs/verification.md](docs/verification.md)
+- [docs/determinism_boundary.md](docs/determinism_boundary.md)
+- [docs/troubleshooting.md](docs/troubleshooting.md)

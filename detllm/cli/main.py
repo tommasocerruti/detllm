@@ -199,6 +199,7 @@ def main(argv: list[str] | None = None) -> int:
 
         batch_result = None
         batch_traces: dict[int, list[dict[str, Any]]] = {}
+        batch_diffs: list[tuple[int, Any]] = []
         if vary_batch_sizes:
             for batch_size in vary_batch_sizes:
                 batch_args = _clone_args(args, batch_size=batch_size)

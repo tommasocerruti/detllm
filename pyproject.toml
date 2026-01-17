@@ -25,6 +25,7 @@ detllm = "detllm.cli.main:main"
 
 [project.optional-dependencies]
 test = ["pytest>=7.0"]
+hf = ["torch", "transformers"]
 
 [tool.setuptools.packages.find]
 where = ["."]

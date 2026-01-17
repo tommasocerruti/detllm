@@ -38,9 +38,7 @@ class HFBackend(BackendAdapter):
             # TODO: Allow configuring pad token instead of defaulting to EOS.
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, torch_dtype=torch_dtype
-        )
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_id, dtype=torch_dtype)
         self.model.to(self.device)
         self.model.eval()
 
