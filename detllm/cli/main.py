@@ -13,6 +13,9 @@ from detllm.backends.hf import HFBackend
 from detllm.core.artifacts import dump_json
 from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
+from detllm.diff.diff import aggregate_diffs, diff_traces
+from detllm.report.render_text import render_report
+from detllm.report.report import Report
 from detllm.trace.io import write_trace
 from detllm.version import __version__
 
@@ -68,8 +71,17 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("--batch-size", type=int, default=1, help="Batch size")
     check_parser.add_argument("--runs", type=int, default=3, help="Number of runs")
     check_parser.add_argument("--vary-batch", required=False, help="Comma-separated batch sizes")
+    check_parser.add_argument("--seed", type=int, default=0, help="Seed for determinism controls")
+    check_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
+    check_parser.add_argument("--dtype", default="float32", help="Model dtype")
+    check_parser.add_argument("--device", default="cpu", help="Device")
     check_parser.add_argument("--mode", choices=["strict", "best-effort"], default="best-effort")
-    check_parser.add_argument("--out", required=False, help="Output directory for artifacts")
+    check_parser.add_argument(
+        "--out",
+        required=False,
+        default="artifacts/check",
+        help="Output directory for artifacts",
+    )
 
     subparsers.add_parser("diff", help="Diff traces and emit a report")
     subparsers.add_parser("report", help="Render report artifacts")
@@ -115,7 +127,73 @@ def main(argv: list[str] | None = None) -> int:
         write_trace(os.path.join(args.out, "trace.jsonl"), trace_rows)
         return 0
 
-    if args.command in {"check", "diff", "report"}:
+    if args.command == "check":
+        if not args.model:
+            parser.error("--model is required for check")
+
+        prompts = _load_prompts(args)
+        if not prompts:
+            parser.error("Prompt input is required via --prompt or --prompt-file")
+
+        os.makedirs(args.out, exist_ok=True)
+        env_snapshot = capture_env()
+        dump_json(os.path.join(args.out, "env.json"), env_snapshot)
+
+        run_config = _build_run_config(
+            args,
+            env_snapshot.get("device"),
+            tier_effective=args.tier,
+        )
+        dump_json(os.path.join(args.out, "run_config.json"), run_config)
+
+        traces: list[list[dict[str, Any]]] = []
+        determinism_rows: list[dict[str, Any]] = []
+        # TODO: Consider reusing the backend per run for speed; per-run reloads isolate state.
+        for run_idx in range(args.runs):
+            with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
+                backend = _build_backend(args)
+                trace_rows = _run_generation(backend, prompts, args)
+
+            traces.append(trace_rows)
+            determinism_rows.append(_wrap_artifact("determinism_applied", ctx.applied.to_dict()))
+            trace_path = os.path.join(args.out, "traces", f"run_{run_idx}.jsonl")
+            os.makedirs(os.path.dirname(trace_path), exist_ok=True)
+            write_trace(trace_path, trace_rows)
+
+        # Determinism controls are expected to be stable across runs; record first run only.
+        dump_json(
+            os.path.join(args.out, "determinism_applied.json"),
+            determinism_rows[0],
+        )
+
+        diffs = [
+            diff_traces(traces[0], traces[i]) for i in range(1, len(traces))
+        ]
+        result = aggregate_diffs(diffs)
+        # TODO: Extend categories for batch variance and score variance in future milestones.
+        report = Report(
+            status=result.status,
+            category=result.category,
+            details={
+                "runs": args.runs,
+                "first_divergence": result.first_divergence,
+            },
+        )
+        dump_json(
+            os.path.join(args.out, "report.json"),
+            _wrap_artifact("report", report.to_dict()),
+        )
+        report_text = render_report(report)
+        with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
+            handle.write(report_text)
+
+        if result.first_divergence is not None:
+            diff_path = os.path.join(args.out, "diffs", "first_divergence.json")
+            dump_json(diff_path, _wrap_artifact("first_divergence", result.first_divergence))
+
+        return 0
+
+    if args.command in {"diff", "report"}:
         parser.error("Command not implemented yet. Follow the roadmap in README.md.")
 
     return 0

@@ -11,3 +11,14 @@ def write_trace(path: str, rows: Iterable[dict[str, Any]]) -> None:
         for row in rows:
             handle.write(json.dumps(row, sort_keys=True))
             handle.write("\n")
+
+
+def read_trace(path: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with open(path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            rows.append(json.loads(line))
+    return rows
