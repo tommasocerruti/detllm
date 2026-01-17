@@ -5,6 +5,9 @@ from __future__ import annotations
 import argparse
 import sys
 
+from detllm.core.artifacts import dump_json
+from detllm.core.env import capture_env
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -17,7 +20,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     env_parser = subparsers.add_parser("env", help="Capture an environment snapshot")
-    env_parser.add_argument("--out", required=False, help="Output path for env.json")
+    env_parser.add_argument(
+        "--out",
+        required=False,
+        default="artifacts/env.json",
+        help="Output path for env.json",
+    )
 
     run_parser = subparsers.add_parser("run", help="Run a single inference and emit artifacts")
     run_parser.add_argument("--backend", required=False, default="hf", help="Backend adapter")
@@ -51,7 +59,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if args.command in {"env", "run", "check", "diff", "report"}:
+    if args.command == "env":
+        snapshot = capture_env()
+        dump_json(args.out, snapshot)
+        return 0
+
+    if args.command in {"run", "check", "diff", "report"}:
         parser.error("Command not implemented yet. Follow the roadmap in README.md.")
 
     return 0

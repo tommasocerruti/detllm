@@ -1,5 +1,6 @@
 """DetLLM package."""
 
-__all__ = ["__version__"]
+from detllm.core.env import capture_env
+from detllm.version import __version__
 
-__version__ = "0.1.0"
+__all__ = ["__version__", "capture_env"]
