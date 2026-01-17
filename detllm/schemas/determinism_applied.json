@@ -3,13 +3,35 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "detLLM DeterminismApplied",
   "type": "object",
-  "required": ["schema_version", "detllm_version", "artifact_type", "tier_requested", "tier_effective"],
+  "required": [
+    "schema_version",
+    "detllm_version",
+    "artifact_type",
+    "tier_requested",
+    "tier_effective",
+    "mode",
+    "seed",
+    "seed_controls",
+    "torch_controls",
+    "env_controls",
+    "downgrades",
+    "warnings",
+    "capability_failures"
+  ],
   "properties": {
     "schema_version": {"type": "string"},
     "detllm_version": {"type": "string"},
     "artifact_type": {"const": "determinism_applied"},
     "tier_requested": {"type": "integer"},
-    "tier_effective": {"type": "integer"}
+    "tier_effective": {"type": "integer"},
+    "mode": {"type": "string"},
+    "seed": {"type": ["integer", "null"]},
+    "seed_controls": {"type": "object"},
+    "torch_controls": {"type": "object"},
+    "env_controls": {"type": "object"},
+    "downgrades": {"type": "array"},
+    "warnings": {"type": "array"},
+    "capability_failures": {"type": "array"}
   },
   "additionalProperties": true
 }

@@ -3,13 +3,39 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "detLLM RunConfig",
   "type": "object",
-  "required": ["schema_version", "detllm_version", "artifact_type", "backend", "model"],
+  "required": [
+    "schema_version",
+    "detllm_version",
+    "artifact_type",
+    "backend",
+    "tier_requested",
+    "tier_effective",
+    "mode",
+    "model",
+    "dtype",
+    "device",
+    "decoding",
+    "batch_size",
+    "vary_batch",
+    "tokenizer",
+    "generation_context"
+  ],
   "properties": {
     "schema_version": {"type": "string"},
     "detllm_version": {"type": "string"},
     "artifact_type": {"const": "run_config"},
     "backend": {"type": "string"},
-    "model": {"type": "string"}
+    "tier_requested": {"type": "integer"},
+    "tier_effective": {"type": "integer"},
+    "mode": {"type": "string"},
+    "model": {"type": "string"},
+    "dtype": {"type": "string"},
+    "device": {"type": "string"},
+    "decoding": {"type": "object"},
+    "batch_size": {"type": "integer"},
+    "vary_batch": {"type": "array", "items": {"type": "integer"}},
+    "tokenizer": {"type": "object"},
+    "generation_context": {"type": "object"}
   },
   "additionalProperties": true
 }
