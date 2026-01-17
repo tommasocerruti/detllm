@@ -1,4 +1,6 @@
-![detLLM logo](detLLM_logo.png)
+<p align="center">
+  <img src="detLLM_logo.png" alt="detLLM logo" width="220" />
+</p>
 
 # detLLM
 
