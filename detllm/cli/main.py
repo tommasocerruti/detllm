@@ -12,7 +12,7 @@ from typing import Any
 from detllm.backends.base import BackendAdapter
 from detllm.backends.hf import HFBackend
 from detllm.backends.vllm import VLLMBackend
-from detllm.core.artifacts import dump_json
+from detllm.core.artifacts import dump_json, load_json
 from detllm.core.capabilities import evaluate_capabilities
 from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
@@ -99,7 +99,14 @@ def build_parser() -> argparse.ArgumentParser:
         default="artifacts/diff",
         help="Output directory for diff artifacts",
     )
-    subparsers.add_parser("report", help="Render report artifacts")
+    report_parser = subparsers.add_parser("report", help="Render report artifacts")
+    report_parser.add_argument("--in", dest="report_in", required=False, help="Input report.json")
+    report_parser.add_argument(
+        "--out",
+        required=False,
+        default="artifacts/report.txt",
+        help="Output text report path",
+    )
 
     return parser
 
@@ -296,7 +303,20 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "report":
-        parser.error("Command not implemented yet. Follow the roadmap in README.md.")
+        if not args.report_in:
+            parser.error("--in is required for report")
+
+        payload = load_json(args.report_in)
+        report = Report(
+            status=payload["status"],
+            category=payload["category"],
+            details=payload.get("details", {}),
+        )
+        report_text = render_report(report)
+        os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+        with open(args.out, "w", encoding="utf-8") as handle:
+            handle.write(report_text)
+        return 0
 
     return 0
 
