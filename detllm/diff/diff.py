@@ -63,6 +63,17 @@ def diff_traces(
                 },
             )
 
+        score_divergence = _first_score_divergence(left.get("scores"), right.get("scores"))
+        if score_divergence is not None:
+            return DiffResult(
+                status="FAIL",
+                category="SCORE_VARIANCE",
+                first_divergence={
+                    "index": idx,
+                    "score_index": score_divergence,
+                },
+            )
+
     return DiffResult(status="PASS", category="PASS", first_divergence=None)
 
 
@@ -70,6 +81,21 @@ def _safe_token(row: dict[str, Any], index: int) -> int | None:
     tokens = row.get("generated_token_ids", [])
     if index < len(tokens):
         return tokens[index]
+    return None
+
+
+def _first_score_divergence(
+    left_scores: list[float] | None,
+    right_scores: list[float] | None,
+) -> int | None:
+    if left_scores is None or right_scores is None:
+        return None
+    n = min(len(left_scores), len(right_scores))
+    for i in range(n):
+        if left_scores[i] != right_scores[i]:
+            return i
+    if len(left_scores) != len(right_scores):
+        return n
     return None
 
 

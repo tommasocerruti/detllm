@@ -76,6 +76,8 @@ class HFBackend(BackendAdapter):
                     "prompt": prompt,
                     "input_ids": inputs["input_ids"][i].tolist(),
                     "output_ids": outputs[i].tolist(),
+                    # TODO: Add score/logprob capture when HF provides stable APIs.
+                    "scores": None,
                 }
             )
         return results

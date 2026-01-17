@@ -348,6 +348,7 @@ def _run_generation(backend: HFBackend, prompts: list[str], args: argparse.Names
                     # TODO: Add a privacy mode to store only token hashes/redacted ids.
                     "input_token_ids_hash": _hash_token_ids(item["input_ids"]),
                     "generated_token_ids": item["output_ids"],
+                    "scores": item.get("scores"),
                 }
             )
     return rows
