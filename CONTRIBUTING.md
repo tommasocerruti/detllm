@@ -7,13 +7,20 @@ Thanks for your interest in DetLLM. This project is in early development; please
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .[test]
+pip install -e '.[test,dev]'
 ```
 
 ## Running tests
 
 ```bash
 pytest
+```
+
+## Linting (optional)
+
+```bash
+pre-commit install
+pre-commit run --all-files
 ```
 
 ## Pull request guidelines

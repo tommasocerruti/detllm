@@ -94,3 +94,7 @@ This repo is a WIP skeleton for the Milestone 0 deliverables:
 - [docs/vllm.md](docs/vllm.md)
 - [docs/python_api.md](docs/python_api.md)
 - [docs/versioning.md](docs/versioning.md)
+
+## Versioning
+
+See [docs/versioning.md](docs/versioning.md) for compatibility guarantees.
