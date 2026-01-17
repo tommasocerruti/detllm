@@ -405,10 +405,6 @@ def main(argv: list[str] | None = None) -> int:
         report_text = render_report(report)
         with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
             handle.write(report_text)
-        if args.report:
-            print(report_text, end="")
-        if args.report:
-            print(report_text, end="")
 
         if _report_divergence(result, batch_result) is not None:
             diff_path = os.path.join(args.out, "diffs", "first_divergence.json")
