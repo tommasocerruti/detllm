@@ -1,11 +1,12 @@
+![detLLM logo](detLLM_logo.png)
+
 # detLLM
+
+[![CI](https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml/badge.svg)](https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 detLLM helps you verify whether an LLM inference setup is reproducible and gives you a minimal repro pack when it is not.
 
 detLLM measures variance across repeated runs and across batch sizes, and explains divergences without overpromising.
-
-TODO: Add logo wordmark.
-TODO: Add demo GIF.
-TODO: Add badges (CI, license, version).
 
 ## Known limitations
 
@@ -13,10 +14,6 @@ TODO: Add badges (CI, license, version).
 - Batch invariance is not guaranteed; it is measured separately.
 - Strict guarantees depend on backend capabilities.
 - Distributed/multiprocess inference is out of scope for now.
-
-## GPU caveats
-
-GPU determinism is conditional. Kernel selection, driver versions, and nondeterministic ops can change outputs even with greedy decoding. detLLM will report variance, but strict guarantees depend on backend capabilities and environment controls.
 
 ## Quickstart
 
@@ -77,21 +74,13 @@ report = check(
 print(report.status, report.category)
 ```
 
-## CLI (planned)
+## CLI
 
 - `detllm env`
 - `detllm run`
 - `detllm check`
 - `detllm diff`
 - `detllm report`
-
-## Project status
-
-This repo is a WIP skeleton for the Milestone 0 deliverables:
-
-- Packaging + CLI entrypoint
-- CI + tests
-- Base docs (LICENSE, CONTRIBUTING, CODE_OF_CONDUCT)
 
 ## Docs
 
