@@ -40,6 +40,17 @@ def build_parser() -> argparse.ArgumentParser:
         default="artifacts/env.json",
         help="Output path for env.json",
     )
+    env_parser.add_argument(
+        "--redact-env",
+        action="store_true",
+        help="Redact sensitive environment fields",
+    )
+    env_parser.add_argument(
+        "--redact-env-var",
+        action="append",
+        default=[],
+        help="Environment variable name to redact (repeatable)",
+    )
 
     run_parser = subparsers.add_parser("run", help="Run a single inference and emit artifacts")
     run_parser.add_argument("--backend", required=False, default="hf", help="Backend adapter")
@@ -63,6 +74,17 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default="artifacts/run",
         help="Output directory for artifacts",
+    )
+    run_parser.add_argument(
+        "--redact-env",
+        action="store_true",
+        help="Redact sensitive environment fields",
+    )
+    run_parser.add_argument(
+        "--redact-env-var",
+        action="append",
+        default=[],
+        help="Environment variable name to redact (repeatable)",
     )
 
     check_parser = subparsers.add_parser("check", help="Repeat runs and measure variance")
@@ -88,6 +110,17 @@ def build_parser() -> argparse.ArgumentParser:
         required=False,
         default="artifacts/check",
         help="Output directory for artifacts",
+    )
+    check_parser.add_argument(
+        "--redact-env",
+        action="store_true",
+        help="Redact sensitive environment fields",
+    )
+    check_parser.add_argument(
+        "--redact-env-var",
+        action="append",
+        default=[],
+        help="Environment variable name to redact (repeatable)",
     )
 
     diff_parser = subparsers.add_parser("diff", help="Diff traces and emit a report")
@@ -121,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "env":
-        snapshot = capture_env()
+        snapshot = capture_env(**_redact_kwargs(args))
         dump_json(args.out, snapshot)
         return 0
 
@@ -134,7 +167,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("Prompt input is required via --prompt or --prompt-file")
 
         os.makedirs(args.out, exist_ok=True)
-        env_snapshot = capture_env()
+        env_snapshot = capture_env(**_redact_kwargs(args))
         dump_json(os.path.join(args.out, "env.json"), env_snapshot)
 
         with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
@@ -174,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("Prompt input is required via --prompt or --prompt-file")
 
         os.makedirs(args.out, exist_ok=True)
-        env_snapshot = capture_env()
+        env_snapshot = capture_env(**_redact_kwargs(args))
         dump_json(os.path.join(args.out, "env.json"), env_snapshot)
 
         vary_batch_sizes = _parse_vary_batch(args.vary_batch)
@@ -191,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
         baseline_fingerprint = env_snapshot.get("fingerprint")
         # TODO: Consider reusing the backend per run for speed; per-run reloads isolate state.
         for run_idx in range(args.runs):
-            env_run = capture_env()
+            env_run = capture_env(**_redact_kwargs(args))
             env_path = os.path.join(args.out, "envs", f"run_{run_idx}.json")
             os.makedirs(os.path.dirname(env_path), exist_ok=True)
             dump_json(env_path, env_run)
@@ -445,6 +478,13 @@ def _wrap_artifact(artifact_type: str, payload: dict[str, Any]) -> dict[str, Any
         "detllm_version": __version__,
         "artifact_type": artifact_type,
         **payload,
+    }
+
+
+def _redact_kwargs(args: argparse.Namespace) -> dict[str, Any]:
+    return {
+        "redact": getattr(args, "redact_env", False),
+        "redact_env_vars": getattr(args, "redact_env_var", []),
     }
 
 

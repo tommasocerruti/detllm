@@ -38,13 +38,15 @@ def run(
     dtype: str = "float32",
     out_dir: str = "artifacts/run",
     backend_adapter: BackendAdapter | None = None,
+    redact: bool = False,
+    redact_env_vars: Sequence[str] | None = None,
 ) -> RunResult:
     from detllm.cli import main as cli_main
     if not prompts:
         raise ValueError("prompts must be non-empty")
 
     os.makedirs(out_dir, exist_ok=True)
-    env_snapshot = capture_env()
+    env_snapshot = capture_env(redact=redact, redact_env_vars=list(redact_env_vars or []))
     dump_json(os.path.join(out_dir, "env.json"), env_snapshot)
 
     args = _build_args(
@@ -107,13 +109,15 @@ def check(
     dtype: str = "float32",
     out_dir: str = "artifacts/check",
     backend_adapter: BackendAdapter | None = None,
+    redact: bool = False,
+    redact_env_vars: Sequence[str] | None = None,
 ) -> Report:
     from detllm.cli import main as cli_main
     if not prompts:
         raise ValueError("prompts must be non-empty")
 
     os.makedirs(out_dir, exist_ok=True)
-    env_snapshot = capture_env()
+    env_snapshot = capture_env(redact=redact, redact_env_vars=list(redact_env_vars or []))
     dump_json(os.path.join(out_dir, "env.json"), env_snapshot)
 
     vary_batch_sizes = list(vary_batch or [])
@@ -145,7 +149,7 @@ def check(
     determinism_rows: list[dict[str, Any]] = []
     baseline_fingerprint = env_snapshot.get("fingerprint")
     for run_idx in range(runs):
-        env_run = capture_env()
+        env_run = capture_env(redact=redact, redact_env_vars=list(redact_env_vars or []))
         env_path = os.path.join(out_dir, "envs", f"run_{run_idx}.json")
         os.makedirs(os.path.dirname(env_path), exist_ok=True)
         dump_json(env_path, env_run)
