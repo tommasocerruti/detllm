@@ -58,3 +58,9 @@ If your shell resolves `pytest` outside the venv, use:
 ```bash
 DETLLM_RUN_INTEGRATION=1 python -m pytest -m integration
 ```
+
+Or use the Makefile target:
+
+```bash
+make test-integration
+```
