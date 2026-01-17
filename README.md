@@ -87,3 +87,4 @@ This repo is a WIP skeleton for the Milestone 0 deliverables:
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 - [docs/vllm.md](docs/vllm.md)
 - [docs/python_api.md](docs/python_api.md)
+- [docs/versioning.md](docs/versioning.md)
