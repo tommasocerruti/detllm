@@ -1,14 +1,25 @@
 <p align="center">
-  <img src="detLLM_logo.png" alt="detLLM logo" width="220" />
+  <img src="detLLM_logo.png" alt="detLLM logo" width="320" />
 </p>
 
-# detLLM
+<h1 align="center">detLLM</h1>
 
-[![CI](https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml/badge.svg)](https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-detLLM helps you verify whether an LLM inference setup is reproducible and gives you a minimal repro pack when it is not.
+<p align="center"><em>Deterministic and verifiable LLM inference</em></p>
 
-detLLM measures variance across repeated runs and across batch sizes, and explains divergences without overpromising.
+
+
+<p align="center">
+  <a href="https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml">
+    <img src="https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License" />
+  </a>
+</p>
+
+## About
+
+detLLM helps you verify whether an LLM inference setup is reproducible and gives you a minimal repro pack when it is not. It measures variance across repeated runs and across batch sizes, and explains divergences without overpromising.
 
 ## Known limitations
 
