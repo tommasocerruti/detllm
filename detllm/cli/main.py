@@ -19,7 +19,7 @@ from detllm.core.env import capture_env
 from detllm.diff.diff import aggregate_diffs, diff_traces
 from detllm.report.render_text import render_report
 from detllm.report.report import Report
-from detllm.trace.io import write_trace
+from detllm.trace.io import read_trace, write_trace
 from detllm.version import __version__
 
 
@@ -90,7 +90,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output directory for artifacts",
     )
 
-    subparsers.add_parser("diff", help="Diff traces and emit a report")
+    diff_parser = subparsers.add_parser("diff", help="Diff traces and emit a report")
+    diff_parser.add_argument("--left", required=False, help="Left trace file (jsonl)")
+    diff_parser.add_argument("--right", required=False, help="Right trace file (jsonl)")
+    diff_parser.add_argument(
+        "--out",
+        required=False,
+        default="artifacts/diff",
+        help="Output directory for diff artifacts",
+    )
     subparsers.add_parser("report", help="Render report artifacts")
 
     return parser
@@ -246,7 +254,39 @@ def main(argv: list[str] | None = None) -> int:
 
         return 0
 
-    if args.command in {"diff", "report"}:
+    if args.command == "diff":
+        if not args.left or not args.right:
+            parser.error("--left and --right are required for diff")
+
+        os.makedirs(args.out, exist_ok=True)
+        left_trace = read_trace(args.left)
+        right_trace = read_trace(args.right)
+        result = diff_traces(left_trace, right_trace)
+
+        report = Report(
+            status=result.status,
+            category=result.category,
+            details={
+                "first_divergence": result.first_divergence,
+            },
+        )
+        dump_json(
+            os.path.join(args.out, "report.json"),
+            _wrap_artifact("report", report.to_dict()),
+        )
+        report_text = render_report(report)
+        with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
+            handle.write(report_text)
+
+        if result.first_divergence is not None:
+            diff_path = os.path.join(args.out, "diffs", "first_divergence.json")
+            dump_json(
+                diff_path,
+                _wrap_artifact("first_divergence", result.first_divergence),
+            )
+        return 0
+
+    if args.command == "report":
         parser.error("Command not implemented yet. Follow the roadmap in README.md.")
 
     return 0
