@@ -183,8 +183,16 @@ def main(argv: list[str] | None = None) -> int:
 
         traces: list[list[dict[str, Any]]] = []
         determinism_rows: list[dict[str, Any]] = []
+        baseline_fingerprint = env_snapshot.get("fingerprint")
         # TODO: Consider reusing the backend per run for speed; per-run reloads isolate state.
         for run_idx in range(args.runs):
+            env_run = capture_env()
+            env_path = os.path.join(args.out, "envs", f"run_{run_idx}.json")
+            os.makedirs(os.path.dirname(env_path), exist_ok=True)
+            dump_json(env_path, env_run)
+            if baseline_fingerprint and env_run.get("fingerprint") != baseline_fingerprint:
+                _write_env_mismatch(args.out, args.runs, run_idx, baseline_fingerprint, env_run)
+                return 0
             with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
                 backend = _build_backend(args)
                 decision = evaluate_capabilities(
@@ -440,6 +448,32 @@ def _write_unsupported(out_dir: str, runs: int, decision) -> None:
         details={
             "runs": runs,
             "capability_failures": decision.capability_failures,
+        },
+    )
+    dump_json(
+        os.path.join(out_dir, "report.json"),
+        _wrap_artifact("report", report.to_dict()),
+    )
+    report_text = render_report(report)
+    with open(os.path.join(out_dir, "report.txt"), "w", encoding="utf-8") as handle:
+        handle.write(report_text)
+
+
+def _write_env_mismatch(
+    out_dir: str,
+    runs: int,
+    run_index: int,
+    baseline_fingerprint: str,
+    current_env: dict[str, Any],
+) -> None:
+    report = Report(
+        status="FAIL",
+        category="ENV_MISMATCH",
+        details={
+            "runs": runs,
+            "run_index": run_index,
+            "baseline_fingerprint": baseline_fingerprint,
+            "current_fingerprint": current_env.get("fingerprint"),
         },
     )
     dump_json(

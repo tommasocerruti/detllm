@@ -62,7 +62,11 @@ def _canonical_fingerprint(payload: dict[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def capture_env() -> dict[str, Any]:
+def capture_env(
+    *,
+    redact: bool = False,
+    redact_env_vars: list[str] | None = None,
+) -> dict[str, Any]:
     """Capture a deterministic environment snapshot."""
 
     snapshot: dict[str, Any] = {
@@ -90,6 +94,13 @@ def capture_env() -> dict[str, Any]:
         # TODO: Consider capturing driver/toolkit versions and CPU metadata.
         # TODO: Add a redaction/allowlist mechanism for sensitive fields.
     }
+
+    if redact:
+        snapshot["python"]["executable"] = "<redacted>"
+        redact_keys = set(redact_env_vars or snapshot["env_vars"].keys())
+        for key in redact_keys:
+            if key in snapshot["env_vars"]:
+                snapshot["env_vars"][key] = "<redacted>"
 
     fingerprint_payload = dict(snapshot)
     snapshot["fingerprint"] = _canonical_fingerprint(fingerprint_payload)

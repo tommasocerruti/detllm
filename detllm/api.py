@@ -143,7 +143,15 @@ def check(
 
     traces: list[list[dict[str, Any]]] = []
     determinism_rows: list[dict[str, Any]] = []
+    baseline_fingerprint = env_snapshot.get("fingerprint")
     for run_idx in range(runs):
+        env_run = capture_env()
+        env_path = os.path.join(out_dir, "envs", f"run_{run_idx}.json")
+        os.makedirs(os.path.dirname(env_path), exist_ok=True)
+        dump_json(env_path, env_run)
+        if baseline_fingerprint and env_run.get("fingerprint") != baseline_fingerprint:
+            cli_main._write_env_mismatch(out_dir, runs, run_idx, baseline_fingerprint, env_run)
+            return Report(status="FAIL", category="ENV_MISMATCH", details={})
         with DeterministicContext(tier, mode, seed) as ctx:
             backend_impl = backend_adapter or cli_main._build_backend(args)
             decision = evaluate_capabilities(ctx.applied, backend_impl.capabilities(), tier, mode)

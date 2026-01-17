@@ -29,3 +29,13 @@ def dump_json(path: str, data: dict[str, Any]) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, sort_keys=True)
         f.write("\n")
+
+
+def validate_json(data: dict[str, Any], schema: dict[str, Any] | None) -> None:
+    if schema is None:
+        return
+    try:
+        import jsonschema
+    except Exception as exc:
+        raise RuntimeError("jsonschema is required for schema validation") from exc
+    jsonschema.validate(instance=data, schema=schema)

@@ -28,6 +28,14 @@ def test_diff_traces_detects_divergence():
     assert result.category == "RUN_VARIANCE_FIXED_BATCH"
 
 
+def test_diff_traces_detects_tokenization_mismatch():
+    base = [{"prompt_id": "a", "input_token_ids_hash": "x", "generated_token_ids": [1]}]
+    other = [{"prompt_id": "a", "input_token_ids_hash": "y", "generated_token_ids": [1]}]
+    result = diff_traces(base, other)
+    assert result.status == "FAIL"
+    assert result.category == "TOKENIZATION_MISMATCH"
+
+
 def test_aggregate_diffs_returns_first_failure():
     pass_result = diff_traces(
         [{"prompt_id": "a", "generated_token_ids": [1]}],

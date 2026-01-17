@@ -47,6 +47,18 @@ def diff_traces(
                 },
             )
 
+        if left.get("input_token_ids_hash") != right.get("input_token_ids_hash"):
+            return DiffResult(
+                status="FAIL",
+                category="TOKENIZATION_MISMATCH",
+                first_divergence={
+                    "index": idx,
+                    "reason": "input_token_ids_hash mismatch",
+                    "left_hash": left.get("input_token_ids_hash"),
+                    "right_hash": right.get("input_token_ids_hash"),
+                },
+            )
+
         divergence = first_token_divergence(
             left.get("generated_token_ids", []),
             right.get("generated_token_ids", []),

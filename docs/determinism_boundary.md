@@ -21,3 +21,7 @@ If scores are unavailable, strict Tier 2 fails with `UNSUPPORTED_REQUEST`. Best-
 ## GPU determinism is conditional
 
 Deterministic algorithms are not always available for every op, and some require environment variables to be set before process start.
+
+## Backend notes: vLLM
+
+The vLLM adapter is Tier 0 only. It captures outputs for measurement, but does not claim fixed-batch repeatability or score stability.
