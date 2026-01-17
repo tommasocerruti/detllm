@@ -7,6 +7,13 @@ TODO: Add logo wordmark.
 TODO: Add demo GIF.
 TODO: Add badges (CI, license, version).
 
+## Known limitations
+
+- GPU determinism is conditional; results can change across drivers/kernels.
+- Batch invariance is not guaranteed; it is measured separately.
+- Strict guarantees depend on backend capabilities.
+- Distributed/multiprocess inference is out of scope for now.
+
 ## GPU caveats
 
 GPU determinism is conditional. Kernel selection, driver versions, and nondeterministic ops can change outputs even with greedy decoding. detLLM will report variance, but strict guarantees depend on backend capabilities and environment controls.
