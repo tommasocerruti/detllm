@@ -86,3 +86,4 @@ This repo is a WIP skeleton for the Milestone 0 deliverables:
 - [docs/determinism_boundary.md](docs/determinism_boundary.md)
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 - [docs/vllm.md](docs/vllm.md)
+- [docs/python_api.md](docs/python_api.md)
