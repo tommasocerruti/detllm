@@ -7,6 +7,10 @@ TODO: Add logo wordmark.
 TODO: Add demo GIF.
 TODO: Add badges (CI, license, version).
 
+## GPU caveats
+
+GPU determinism is conditional. Kernel selection, driver versions, and nondeterministic ops can change outputs even with greedy decoding. detLLM will report variance, but strict guarantees depend on backend capabilities and environment controls.
+
 ## Quickstart
 
 ```bash

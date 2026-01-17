@@ -1,4 +1,5 @@
 {
+  "description": "Stable schema. Only additive changes within the same major version.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "detLLM RunConfig",
   "type": "object",

@@ -1,11 +1,14 @@
 # Versioning policy
 
-detLLM follows semantic versioning with pre-1.0 rules:
+detLLM follows semantic versioning:
 
-- `0.x` may include breaking changes without notice.
-- Patch releases fix bugs and documentation.
-- Minor releases add features with best-effort backward compatibility.
+- `0.x` may include breaking changes with notice.
+- `1.x` and above follow SemVer rules.
 
-Schema changes:
+## Artifact schema stability
+
+Schema versioning is stable and forward compatible:
+
 - Within a schema major version: only add fields, never remove or rename.
 - Readers must ignore unknown fields.
+- Breaking schema changes require a major schema version bump.
