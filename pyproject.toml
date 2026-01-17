@@ -35,4 +35,7 @@ include = ["detllm*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "integration: marks integration tests that may require network/model downloads",
+]
 # TODO: Add ruff configuration once we adopt it.

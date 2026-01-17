@@ -5,10 +5,13 @@ import pytest
 from detllm import api
 
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("DETLLM_RUN_INTEGRATION") != "1",
-    reason="integration test disabled",
-)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        os.environ.get("DETLLM_RUN_INTEGRATION") != "1",
+        reason="integration test disabled",
+    ),
+]
 
 
 def test_hf_check_e2e(tmp_path):
