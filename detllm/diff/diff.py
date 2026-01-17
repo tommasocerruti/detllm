@@ -31,7 +31,11 @@ def diff_traces(
         return DiffResult(
             status="FAIL",
             category="GEN_CONTEXT_MISMATCH",
-            first_divergence={"reason": "trace lengths differ"},
+            first_divergence={
+                "reason": "trace lengths differ",
+                "left_len": len(base),
+                "right_len": len(other),
+            },
         )
 
     for idx, (left, right) in enumerate(zip(base, other)):

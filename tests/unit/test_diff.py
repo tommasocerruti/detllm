@@ -47,3 +47,12 @@ def test_aggregate_diffs_returns_first_failure():
     )
     result = aggregate_diffs([pass_result, fail_result])
     assert result.status == "FAIL"
+
+
+def test_diff_traces_length_mismatch_details():
+    result = diff_traces(
+        [{"prompt_id": "a", "generated_token_ids": [1]}],
+        [],
+    )
+    assert result.category == "GEN_CONTEXT_MISMATCH"
+    assert result.first_divergence["left_len"] == 1
