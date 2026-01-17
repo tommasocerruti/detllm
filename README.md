@@ -20,6 +20,12 @@
 
 detLLM verifies reproducibility for LLM inference and produces a minimal repro pack when outputs diverge. It measures run-to-run variance and batch-size variance, and reports results with explicit, capability-gated guarantees (only claimed when the backend can actually enforce them).
 
+## Demo
+
+<p align="center">
+  <img src="demo.gif" alt="detLLM demo" width="760" />
+</p>
+
 ## Quickstart
 
 ```bash
