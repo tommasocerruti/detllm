@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "detllm"
-version = "0.1.0"
+version = "0.1.1"
 description = "Deterministic-mode checks for LLM inference: measure run/batch variance, generate repro packs, and explain why outputs differ."
 readme = "README.md"
 requires-python = ">=3.10"

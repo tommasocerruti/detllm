@@ -4,6 +4,10 @@
 
 - Nothing yet.
 
+## 0.1.1
+
+- docs: fix README assets for PyPI (absolute URLs).
+
 ## 0.1.0
 
 - CLI: `env`, `run`, `check`, `diff`, `report` commands.
