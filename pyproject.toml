@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "detllm"
+version = "0.1.0"
+description = "Deterministic-mode checks for LLM inference: measure run/batch variance, generate repro packs, and explain why outputs differ."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "DetLLM Contributors" }]
+keywords = ["llm", "determinism", "reproducibility", "inference"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+
+[project.scripts]
+detllm = "detllm.cli.main:main"
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["detllm*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# TODO: Add ruff configuration once we adopt it.

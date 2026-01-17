@@ -1,0 +1,24 @@
+# Contributing to DetLLM
+
+Thanks for your interest in DetLLM. This project is in early development; please keep changes small and focused.
+
+## Development setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[test]
+```
+
+## Running tests
+
+```bash
+pytest
+```
+
+## Pull request guidelines
+
+- Keep PRs focused on a single goal.
+- Include tests for new behavior when feasible.
+- Update README or docs when behavior changes.
+- Use Conventional Commits for commit messages. See https://www.conventionalcommits.org/en/v1.0.0/
