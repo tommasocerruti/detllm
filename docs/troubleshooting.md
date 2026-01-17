@@ -43,3 +43,8 @@ If artifacts contain sensitive fields:
 
 If schema validation fails:
 - Install the optional `schema` extra and rerun `detllm report --validate-schema`.
+
+## Pytest uses system Python
+
+If `pytest` resolves to your system Python instead of the venv, prefer:
+- `python -m pytest` (uses the active interpreter)

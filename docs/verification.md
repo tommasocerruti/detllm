@@ -50,3 +50,11 @@ Redaction flags (CLI):
 
 Schema validation (CLI):
 - `detllm report --validate-schema` validates `report.json` against the JSON schema.
+
+## Integration test tip
+
+If your shell resolves `pytest` outside the venv, use:
+
+```bash
+DETLLM_RUN_INTEGRATION=1 python -m pytest -m integration
+```
