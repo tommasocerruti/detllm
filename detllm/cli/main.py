@@ -1,4 +1,4 @@
-"""DetLLM command-line interface."""
+"""detLLM command-line interface."""
 
 from __future__ import annotations
 
@@ -28,6 +28,9 @@ from detllm.report.render_text import render_report
 from detllm.report.report import Report
 from detllm.trace.io import read_trace, write_trace
 from detllm.version import __version__
+from detllm.logging import configure_logging, get_logger
+
+logger = get_logger("cli")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
             "generate repro packs, and explain why outputs differ."
         ),
     )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--quiet", action="store_true", help="Reduce logging output")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     env_parser = subparsers.add_parser("env", help="Capture an environment snapshot")
@@ -204,6 +209,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    configure_logging(verbose=getattr(args, "verbose", False), quiet=getattr(args, "quiet", False))
 
     if args.command == "env":
         snapshot = capture_env(**_redact_kwargs(args))
@@ -211,6 +217,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.validate_schema:
             validate_artifact(env_payload)
         dump_json(args.out, env_payload)
+        logger.info("Wrote env snapshot to %s", args.out)
         return 0
 
     if args.command == "run":
@@ -227,6 +234,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.validate_schema:
             validate_artifact(env_payload)
         dump_json(os.path.join(args.out, "env.json"), env_payload)
+        logger.info("Running detllm run; output=%s", args.out)
 
         with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
             backend = _build_backend(args)
@@ -266,6 +274,7 @@ def main(argv: list[str] | None = None) -> int:
             _coerce_trace_rows(trace_rows),
             validate_rows=args.validate_schema,
         )
+        logger.info("Wrote run artifacts to %s", args.out)
         return 0
 
     if args.command == "check":
@@ -282,6 +291,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.validate_schema:
             validate_artifact(env_payload)
         dump_json(os.path.join(args.out, "env.json"), env_payload)
+        logger.info("Running detllm check; output=%s runs=%s", args.out, args.runs)
 
         vary_batch_sizes = _parse_vary_batch(args.vary_batch)
         run_config = _build_run_config(
@@ -412,6 +422,7 @@ def main(argv: list[str] | None = None) -> int:
                 diff_path,
                 _wrap_artifact("first_divergence", _report_divergence(result, batch_result)),
             )
+        logger.info("Wrote check artifacts to %s", args.out)
 
         return 0
 
@@ -440,6 +451,7 @@ def main(argv: list[str] | None = None) -> int:
             handle.write(report_text)
         if args.report:
             print(report_text, end="")
+        logger.info("Wrote diff report to %s", args.out)
 
         if result.first_divergence is not None:
             diff_path = os.path.join(args.out, "diffs", "first_divergence.json")
@@ -465,6 +477,7 @@ def main(argv: list[str] | None = None) -> int:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
         with open(args.out, "w", encoding="utf-8") as handle:
             handle.write(report_text)
+        logger.info("Wrote report text to %s", args.out)
         return 0
 
     return 0

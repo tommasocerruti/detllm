@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from detllm.backends.base import BackendAdapter, BackendCapabilities
+from detllm.logging import get_logger
+
+logger = get_logger("backends.hf")
 
 
 class HFBackend(BackendAdapter):
@@ -20,12 +23,14 @@ class HFBackend(BackendAdapter):
         try:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
+            from transformers.utils import logging as hf_logging
         except Exception as exc:
             raise RuntimeError(
                 "HF backend requires torch and transformers. Install detllm with the"
                 " required dependencies."
             ) from exc
 
+        hf_logging.set_verbosity_error()
         dtype_map = {
             "float32": torch.float32,
             "float16": torch.float16,
@@ -38,6 +43,7 @@ class HFBackend(BackendAdapter):
         if self.tokenizer.pad_token_id is None and self.tokenizer.eos_token_id is not None:
             # TODO: Allow configuring pad token instead of defaulting to EOS.
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+            logger.debug("Set pad_token_id to eos_token_id=%s", self.tokenizer.pad_token_id)
 
         self.model = AutoModelForCausalLM.from_pretrained(self.model_id, dtype=torch_dtype)
         self.model.to(self.device)
