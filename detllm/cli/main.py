@@ -11,6 +11,7 @@ from typing import Any
 
 from detllm.backends.hf import HFBackend
 from detllm.core.artifacts import dump_json
+from detllm.core.capabilities import evaluate_capabilities
 from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
 from detllm.diff.diff import aggregate_diffs, diff_traces
@@ -116,6 +117,14 @@ def main(argv: list[str] | None = None) -> int:
 
         with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
             backend = _build_backend(args)
+            decision = evaluate_capabilities(ctx.applied, backend.capabilities(), args.tier, args.mode)
+            if not decision.supported:
+                _write_unsupported(args.out, args.runs if hasattr(args, "runs") else 1, decision)
+                dump_json(
+                    os.path.join(args.out, "determinism_applied.json"),
+                    _wrap_artifact("determinism_applied", ctx.applied.to_dict()),
+                )
+                return 2
             trace_rows = _run_generation(backend, prompts, args)
 
         dump_json(
@@ -126,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
             args,
             env_snapshot.get("device"),
             ctx.applied.tier_effective,
+            _parse_vary_batch(getattr(args, "vary_batch", None)),
         )
         dump_json(os.path.join(args.out, "run_config.json"), run_config)
         write_trace(os.path.join(args.out, "trace.jsonl"), trace_rows)
@@ -158,6 +168,16 @@ def main(argv: list[str] | None = None) -> int:
         for run_idx in range(args.runs):
             with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
                 backend = _build_backend(args)
+                decision = evaluate_capabilities(
+                    ctx.applied, backend.capabilities(), args.tier, args.mode
+                )
+                if not decision.supported:
+                    _write_unsupported(args.out, args.runs, decision)
+                    dump_json(
+                        os.path.join(args.out, "determinism_applied.json"),
+                        _wrap_artifact("determinism_applied", ctx.applied.to_dict()),
+                    )
+                    return 2
                 trace_rows = _run_generation(backend, prompts, args)
 
             traces.append(trace_rows)
@@ -326,6 +346,24 @@ def _wrap_artifact(artifact_type: str, payload: dict[str, Any]) -> dict[str, Any
         "artifact_type": artifact_type,
         **payload,
     }
+
+
+def _write_unsupported(out_dir: str, runs: int, decision) -> None:
+    report = Report(
+        status="FAIL",
+        category="UNSUPPORTED_REQUEST",
+        details={
+            "runs": runs,
+            "capability_failures": decision.capability_failures,
+        },
+    )
+    dump_json(
+        os.path.join(out_dir, "report.json"),
+        _wrap_artifact("report", report.to_dict()),
+    )
+    report_text = render_report(report)
+    with open(os.path.join(out_dir, "report.txt"), "w", encoding="utf-8") as handle:
+        handle.write(report_text)
 
 
 def _parse_vary_batch(value: str | None) -> list[int]:

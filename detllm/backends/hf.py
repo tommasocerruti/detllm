@@ -49,6 +49,7 @@ class HFBackend(BackendAdapter):
             supports_tier1_fixed_batch=True,
             supports_scores=False,
             supports_torch_deterministic=True,
+            # TODO: Add score/logprob capture support for Tier 2 when available.
             notes=["CPU-only deterministic controls are best-effort."],
         )
 
