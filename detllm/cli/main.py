@@ -9,7 +9,9 @@ import os
 import sys
 from typing import Any
 
+from detllm.backends.base import BackendAdapter
 from detllm.backends.hf import HFBackend
+from detllm.backends.vllm import VLLMBackend
 from detllm.core.artifacts import dump_json
 from detllm.core.capabilities import evaluate_capabilities
 from detllm.core.deterministic import DeterministicContext
@@ -275,10 +277,12 @@ def _load_prompts(args: argparse.Namespace) -> list[str]:
     return []
 
 
-def _build_backend(args: argparse.Namespace) -> HFBackend:
-    if args.backend != "hf":
-        raise ValueError(f"Unsupported backend: {args.backend}")
-    return HFBackend(args.model, device=args.device, dtype=args.dtype)
+def _build_backend(args: argparse.Namespace) -> BackendAdapter:
+    if args.backend == "hf":
+        return HFBackend(args.model, device=args.device, dtype=args.dtype)
+    if args.backend == "vllm":
+        return VLLMBackend(args.model)
+    raise ValueError(f"Unsupported backend: {args.backend}")
 
 
 def _hash_prompt(prompt: str) -> str:
