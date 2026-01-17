@@ -80,3 +80,7 @@ head -n 1 artifacts/check_t2/traces/run_0.jsonl
 ```
 
 You should see a `scores` field containing per-token logprobs.
+
+## CI note
+
+Integration tests run by default in CI and will download a tiny HF model.
