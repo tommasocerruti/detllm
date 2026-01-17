@@ -31,12 +31,14 @@ def test_cli_diff_writes_report(tmp_path):
             str(right),
             "--out",
             str(out_dir),
+            "--report",
         ],
         check=True,
         capture_output=True,
         text=True,
     )
     assert result.stderr == ""
+    assert "Status: PASS" in result.stdout
 
     report = json.loads((out_dir / "report.json").read_text(encoding="utf-8"))
     assert report["category"] == "PASS"

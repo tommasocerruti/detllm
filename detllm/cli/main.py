@@ -179,6 +179,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate output artifacts against schemas",
     )
+    diff_parser.add_argument(
+        "--report",
+        action="store_true",
+        help="Print report text to stdout",
+    )
     report_parser = subparsers.add_parser("report", help="Render report artifacts")
     report_parser.add_argument("--in", dest="report_in", required=False, help="Input report.json")
     report_parser.add_argument(
@@ -390,6 +395,7 @@ def main(argv: list[str] | None = None) -> int:
                 "batch_sizes": vary_batch_sizes,
                 "first_divergence": _report_divergence(result, batch_result),
                 "batch_divergence": _batch_divergence_detail(batch_diffs, result),
+                "baseline_batch_size": args.batch_size,
             },
         )
         report_payload = _wrap_artifact("report", report.to_dict())
@@ -399,6 +405,10 @@ def main(argv: list[str] | None = None) -> int:
         report_text = render_report(report)
         with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
             handle.write(report_text)
+        if args.report:
+            print(report_text, end="")
+        if args.report:
+            print(report_text, end="")
 
         if _report_divergence(result, batch_result) is not None:
             diff_path = os.path.join(args.out, "diffs", "first_divergence.json")
@@ -432,6 +442,8 @@ def main(argv: list[str] | None = None) -> int:
         report_text = render_report(report)
         with open(os.path.join(args.out, "report.txt"), "w", encoding="utf-8") as handle:
             handle.write(report_text)
+        if args.report:
+            print(report_text, end="")
 
         if result.first_divergence is not None:
             diff_path = os.path.join(args.out, "diffs", "first_divergence.json")

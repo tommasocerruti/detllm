@@ -38,6 +38,25 @@ def test_clone_args_updates_batch_size():
     assert clone.other == "x"
 
 
+def test_report_includes_baseline_batch_size():
+    args = argparse.Namespace(
+        runs=2,
+        batch_size=3,
+    )
+    report = cli_main.Report(
+        status="PASS",
+        category="PASS",
+        details={
+            "runs": args.runs,
+            "batch_sizes": [],
+            "first_divergence": None,
+            "batch_divergence": None,
+            "baseline_batch_size": args.batch_size,
+        },
+    )
+    assert report.details["baseline_batch_size"] == 3
+
+
 def test_batch_divergence_detail_reports_first_batch():
     run_result = DiffResult(status="PASS", category="PASS", first_divergence=None)
     batch_diffs = [
