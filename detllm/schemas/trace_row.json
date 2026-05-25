@@ -15,7 +15,16 @@
     "decoding_do_sample": {"type": ["boolean", "null"]},
     "decoding_temperature": {"type": ["number", "null"]},
     "decoding_top_p": {"type": ["number", "null"]},
-    "decoding_top_k": {"type": ["integer", "null"]}
+    "decoding_top_k": {"type": ["integer", "null"]},
+    "topk_token_ids": {
+      "type": ["array", "null"],
+      "items": {"type": "array", "items": {"type": "integer"}}
+    },
+    "topk_scores": {
+      "type": ["array", "null"],
+      "items": {"type": "array", "items": {"type": "number"}}
+    },
+    "prompt_text": {"type": ["string", "null"]}
   },
   "additionalProperties": true
 }

@@ -11,6 +11,12 @@
   <a href="https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml">
     <img src="https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml/badge.svg" alt="CI" />
   </a>
+  <a href="https://pypi.org/project/detllm/">
+    <img src="https://img.shields.io/pypi/v/detllm.svg" alt="PyPI" />
+  </a>
+  <a href="https://pypi.org/project/detllm/">
+    <img src="https://img.shields.io/pypi/pyversions/detllm.svg" alt="Python versions" />
+  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License" />
   </a>
@@ -94,6 +100,15 @@ print(report.status, report.category)
 - `detllm check`
 - `detllm diff`
 - `detllm report`
+- `detllm diagnose`
+- `detllm replay`
+
+## Flight Recorder
+
+`detllm diagnose --in artifacts/check1` ranks likely causes for a repro pack and
+writes `diagnosis.json` + `diagnosis.txt`. `detllm replay --in artifacts/check1
+--probe auto` runs targeted local probes when prompt text was captured with
+`--include-token-text`.
 
 ## Known limitations
 
@@ -105,6 +120,7 @@ print(report.status, report.category)
 ## Docs
 
 - [docs/verification.md](docs/verification.md)
+- [docs/flight_recorder.md](docs/flight_recorder.md)
 - [docs/determinism_boundary.md](docs/determinism_boundary.md)
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 - [docs/vllm.md](docs/vllm.md)

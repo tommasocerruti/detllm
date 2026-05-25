@@ -64,6 +64,7 @@ class HFBackend(BackendAdapter):
         max_new_tokens: int = 32,
         do_sample: bool = False,
         capture_scores: bool = False,
+        capture_topk_scores: int = 0,
     ) -> list[dict[str, Any]]:
         import torch
         import torch.nn.functional as torch_f
@@ -74,16 +75,17 @@ class HFBackend(BackendAdapter):
         inputs = self.tokenizer(prompts, return_tensors="pt", padding=True)
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
+        capture_any_scores = capture_scores or capture_topk_scores > 0
         with torch.inference_mode():
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
                 do_sample=do_sample,
-                output_scores=capture_scores,
-                return_dict_in_generate=capture_scores,
+                output_scores=capture_any_scores,
+                return_dict_in_generate=capture_any_scores,
             )
 
-        if capture_scores:
+        if capture_any_scores:
             sequences = outputs.sequences
             score_tensors = outputs.scores
         else:
@@ -93,21 +95,33 @@ class HFBackend(BackendAdapter):
         results: list[dict[str, Any]] = []
         for i, prompt in enumerate(prompts):
             scores = None
-            if capture_scores and score_tensors is not None:
+            topk_token_ids = None
+            topk_scores = None
+            if capture_any_scores and score_tensors is not None:
                 input_len = int(inputs["attention_mask"][i].sum().item())
-                scores = _token_logprobs(
-                    sequences[i],
-                    input_len,
-                    score_tensors,
-                    i,
-                    torch_f,
-                )
+                if capture_scores:
+                    scores = _token_logprobs(
+                        sequences[i],
+                        input_len,
+                        score_tensors,
+                        i,
+                        torch_f,
+                    )
+                if capture_topk_scores > 0:
+                    topk_token_ids, topk_scores = _token_topk_logprobs(
+                        score_tensors,
+                        i,
+                        torch_f,
+                        capture_topk_scores,
+                    )
             results.append(
                 {
                     "prompt": prompt,
                     "input_ids": inputs["input_ids"][i].tolist(),
                     "output_ids": sequences[i].tolist(),
                     "scores": scores,
+                    "topk_token_ids": topk_token_ids,
+                    "topk_scores": topk_scores,
                     "tokenizer_id": self._tokenizer_id,
                 }
             )
@@ -115,9 +129,9 @@ class HFBackend(BackendAdapter):
 
 
 def _token_logprobs(
-    sequence: torch.Tensor,
+    sequence: Any,
     input_len: int,
-    score_tensors: list[torch.Tensor],
+    score_tensors: list[Any],
     batch_index: int,
     torch_f,
 ) -> list[float]:
@@ -127,3 +141,19 @@ def _token_logprobs(
         log_probs = torch_f.log_softmax(scores[batch_index], dim=-1)
         logprobs.append(float(log_probs[token_id].item()))
     return logprobs
+
+
+def _token_topk_logprobs(
+    score_tensors: list[Any],
+    batch_index: int,
+    torch_f,
+    top_k: int,
+) -> tuple[list[list[int]], list[list[float]]]:
+    token_ids: list[list[int]] = []
+    scores_out: list[list[float]] = []
+    for scores in score_tensors:
+        log_probs = torch_f.log_softmax(scores[batch_index], dim=-1)
+        top_values, top_indices = log_probs.topk(top_k)
+        token_ids.append([int(token_id) for token_id in top_indices.tolist()])
+        scores_out.append([float(value) for value in top_values.tolist()])
+    return token_ids, scores_out

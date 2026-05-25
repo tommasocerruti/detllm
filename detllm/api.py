@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from typing import Any, Sequence
 
 from detllm.backends.base import BackendAdapter
@@ -13,8 +13,8 @@ from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
 from detllm.core.models import DeterminismAppliedRecord, EnvSnapshot, RunConfig, TokenTraceRow
 from detllm.diff.diff import aggregate_diffs, diff_traces
-from detllm.report.report import Report
 from detllm.report.render_text import render_report
+from detllm.report.report import Report
 from detllm.trace.io import write_trace
 from detllm.version import __version__
 
@@ -36,6 +36,7 @@ def run(
     batch_size: int = 1,
     seed: int = 0,
     max_new_tokens: int = 32,
+    capture_topk_scores: int = 0,
     temperature: float = 0.0,
     top_p: float = 1.0,
     top_k: int = 0,
@@ -46,6 +47,7 @@ def run(
     redact: bool = False,
     redact_env_vars: Sequence[str] | None = None,
     validate_schema: bool = False,
+    include_token_text: bool = False,
 ) -> RunResult:
     from detllm.cli import main as cli_main
     if not prompts:
@@ -67,12 +69,14 @@ def run(
         batch_size=batch_size,
         seed=seed,
         max_new_tokens=max_new_tokens,
+        capture_topk_scores=capture_topk_scores,
         temperature=temperature,
         top_p=top_p,
         top_k=top_k,
         device=device,
         dtype=dtype,
         out_dir=out_dir,
+        include_token_text=include_token_text,
     )
 
     with DeterministicContext(tier, mode, seed) as ctx:
@@ -89,7 +93,11 @@ def run(
             return RunResult(status="FAIL", category="UNSUPPORTED_REQUEST", out_dir=out_dir)
 
         trace_rows = cli_main._run_generation(
-            backend_impl, list(prompts), args, capture_scores=ctx.applied.tier_effective >= 2
+            backend_impl,
+            list(prompts),
+            args,
+            capture_scores=ctx.applied.tier_effective >= 2,
+            capture_topk_scores=capture_topk_scores,
         )
 
     determinism_payload = _coerce_determinism(ctx.applied.to_dict())
@@ -126,6 +134,7 @@ def check(
     vary_batch: Sequence[int] | None = None,
     seed: int = 0,
     max_new_tokens: int = 32,
+    capture_topk_scores: int = 0,
     temperature: float = 0.0,
     top_p: float = 1.0,
     top_k: int = 0,
@@ -136,6 +145,7 @@ def check(
     redact: bool = False,
     redact_env_vars: Sequence[str] | None = None,
     validate_schema: bool = False,
+    include_token_text: bool = False,
 ) -> Report:
     from detllm.cli import main as cli_main
     if not prompts:
@@ -158,6 +168,7 @@ def check(
         batch_size=batch_size,
         seed=seed,
         max_new_tokens=max_new_tokens,
+        capture_topk_scores=capture_topk_scores,
         temperature=temperature,
         top_p=top_p,
         top_k=top_k,
@@ -166,6 +177,7 @@ def check(
         out_dir=out_dir,
         runs=runs,
         vary_batch=vary_batch_sizes,
+        include_token_text=include_token_text,
     )
 
     run_config = cli_main._build_run_config(
@@ -215,7 +227,11 @@ def check(
                 return Report(status="FAIL", category="UNSUPPORTED_REQUEST", details={})
 
             trace_rows = cli_main._run_generation(
-                backend_impl, list(prompts), args, capture_scores=ctx.applied.tier_effective >= 2
+                backend_impl,
+                list(prompts),
+                args,
+                capture_scores=ctx.applied.tier_effective >= 2,
+                capture_topk_scores=capture_topk_scores,
             )
 
         traces.append(trace_rows)
@@ -248,6 +264,7 @@ def check(
                     list(prompts),
                     batch_args,
                     capture_scores=ctx.applied.tier_effective >= 2,
+                    capture_topk_scores=capture_topk_scores,
                 )
             batch_traces[batch_size_item] = trace_rows
             trace_path = os.path.join(out_dir, "traces", f"batch_{batch_size_item}.jsonl")
@@ -279,10 +296,51 @@ def check(
         diff_path = os.path.join(out_dir, "diffs", "first_divergence.json")
         dump_json(
             diff_path,
-            cli_main._wrap_artifact("first_divergence", cli_main._report_divergence(result, batch_result)),
+            cli_main._wrap_artifact(
+                "first_divergence",
+                cli_main._report_divergence(result, batch_result),
+            ),
         )
 
     return report
+
+
+def diagnose(
+    in_dir: str,
+    out_dir: str | None = None,
+    include_token_text: bool = False,
+    validate_schema: bool = False,
+):
+    from detllm.flight_recorder.diagnose import diagnose_directory
+
+    return diagnose_directory(
+        in_dir,
+        out_dir=out_dir,
+        include_token_text=include_token_text,
+        validate_schema=validate_schema,
+    )
+
+
+def replay(
+    in_dir: str,
+    probe: str = "auto",
+    out_dir: str | None = None,
+    include_token_text: bool = False,
+    capture_topk_scores: int = 5,
+    validate_schema: bool = False,
+    backend_adapter: BackendAdapter | None = None,
+):
+    from detllm.flight_recorder.replay import replay_directory
+
+    return replay_directory(
+        in_dir,
+        probe=probe,
+        out_dir=out_dir,
+        include_token_text=include_token_text,
+        capture_topk_scores=capture_topk_scores,
+        validate_schema=validate_schema,
+        backend_adapter=backend_adapter,
+    )
 
 
 def _build_args(**kwargs: Any) -> Any:
@@ -293,9 +351,9 @@ def _build_args(**kwargs: Any) -> Any:
     for key, value in kwargs.items():
         setattr(args, key, value)
     if not hasattr(args, "runs"):
-        setattr(args, "runs", 1)
+        args.runs = 1
     if not hasattr(args, "vary_batch"):
-        setattr(args, "vary_batch", [])
+        args.vary_batch = []
     return args
 
 

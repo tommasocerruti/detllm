@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Nothing yet.
+- Flight Recorder: `diagnose` and `replay` commands, Python API parity, diagnosis
+  artifacts, targeted replay probes, and optional top-k score capture.
 
 ## 0.1.1
 

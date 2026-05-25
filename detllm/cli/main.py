@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import os
-import sys
 from typing import Any
 
 from detllm.backends.base import BackendAdapter
@@ -24,11 +23,11 @@ from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
 from detllm.core.models import DeterminismAppliedRecord, EnvSnapshot, RunConfig, TokenTraceRow
 from detllm.diff.diff import aggregate_diffs, diff_traces
+from detllm.logging import configure_logging, get_logger
 from detllm.report.render_text import render_report
 from detllm.report.report import Report
 from detllm.trace.io import read_trace, write_trace
 from detllm.version import __version__
-from detllm.logging import configure_logging, get_logger
 
 logger = get_logger("cli")
 
@@ -84,6 +83,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
     run_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=0,
+        help="Capture top-k logprobs per generated token when score capture is enabled",
+    )
+    run_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in traces for local replay debugging",
+    )
+    run_parser.add_argument(
         "--temperature", type=float, default=0.0, help="Sampling temperature"
     )
     run_parser.add_argument("--top-p", type=float, default=1.0, help="Top-p nucleus sampling")
@@ -134,6 +144,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check_parser.add_argument("--seed", type=int, default=0, help="Seed for determinism controls")
     check_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
+    check_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=0,
+        help="Capture top-k logprobs per generated token when score capture is enabled",
+    )
+    check_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in traces for local replay debugging",
+    )
     check_parser.add_argument(
         "--temperature", type=float, default=0.0, help="Sampling temperature"
     )
@@ -202,6 +223,55 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate report.json against schema",
     )
+    diagnose_parser = subparsers.add_parser(
+        "diagnose", help="Analyze check artifacts and rank likely causes"
+    )
+    diagnose_parser.add_argument("--in", dest="diagnose_in", required=False, help="Check directory")
+    diagnose_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for diagnosis artifacts",
+    )
+    diagnose_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Render token text when present in artifacts",
+    )
+    diagnose_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate diagnosis.json against schema",
+    )
+
+    replay_parser = subparsers.add_parser("replay", help="Run targeted replay probes")
+    replay_parser.add_argument("--in", dest="replay_in", required=False, help="Check directory")
+    replay_parser.add_argument(
+        "--probe",
+        choices=["auto", "isolate-prompts", "batch-shape", "score-margins", "tier2"],
+        default="auto",
+        help="Replay probe to run",
+    )
+    replay_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for replay artifacts",
+    )
+    replay_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in replay traces",
+    )
+    replay_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=5,
+        help="Top-k scores to capture for score-margin replay probes",
+    )
+    replay_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate replay.json against schema",
+    )
 
     return parser
 
@@ -238,7 +308,12 @@ def main(argv: list[str] | None = None) -> int:
 
         with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
             backend = _build_backend(args)
-            decision = evaluate_capabilities(ctx.applied, backend.capabilities(), args.tier, args.mode)
+            decision = evaluate_capabilities(
+                ctx.applied,
+                backend.capabilities(),
+                args.tier,
+                args.mode,
+            )
             if not decision.supported:
                 _write_unsupported(
                     args.out,
@@ -252,7 +327,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 2
             trace_rows = _run_generation(
-                backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
+                backend,
+                prompts,
+                args,
+                capture_scores=ctx.applied.tier_effective >= 2,
+                capture_topk_scores=args.capture_topk_scores,
             )
 
         determinism_payload = _coerce_determinism(ctx.applied.to_dict())
@@ -345,7 +424,11 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     return 2
                 trace_rows = _run_generation(
-                    backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
+                    backend,
+                    prompts,
+                    args,
+                    capture_scores=ctx.applied.tier_effective >= 2,
+                    capture_topk_scores=args.capture_topk_scores,
                 )
 
             traces.append(trace_rows)
@@ -381,6 +464,7 @@ def main(argv: list[str] | None = None) -> int:
                         prompts,
                         batch_args,
                         capture_scores=ctx.applied.tier_effective >= 2,
+                        capture_topk_scores=args.capture_topk_scores,
                     )
                 batch_traces[batch_size] = trace_rows
                 trace_path = os.path.join(args.out, "traces", f"batch_{batch_size}.jsonl")
@@ -480,6 +564,36 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("Wrote report text to %s", args.out)
         return 0
 
+    if args.command == "diagnose":
+        if not args.diagnose_in:
+            parser.error("--in is required for diagnose")
+        from detllm.flight_recorder.diagnose import diagnose_directory
+
+        diagnosis = diagnose_directory(
+            args.diagnose_in,
+            out_dir=args.out,
+            include_token_text=args.include_token_text,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote diagnosis artifacts to %s", diagnosis.out_dir)
+        return 0
+
+    if args.command == "replay":
+        if not args.replay_in:
+            parser.error("--in is required for replay")
+        from detllm.flight_recorder.replay import replay_directory
+
+        result = replay_directory(
+            args.replay_in,
+            probe=args.probe,
+            out_dir=args.out,
+            include_token_text=args.include_token_text,
+            capture_topk_scores=args.capture_topk_scores,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote replay artifacts to %s", result.out_dir)
+        return 0
+
     return 0
 
 
@@ -530,6 +644,7 @@ def _run_generation(
     prompts: list[str],
     args: argparse.Namespace,
     capture_scores: bool = False,
+    capture_topk_scores: int = 0,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     batch_size = max(1, args.batch_size)
@@ -540,16 +655,21 @@ def _run_generation(
             max_new_tokens=args.max_new_tokens,
             do_sample=False,
             capture_scores=capture_scores,
+            capture_topk_scores=capture_topk_scores,
         )
         for item in results:
+            prompt_text = item["prompt"] if getattr(args, "include_token_text", False) else None
             rows.append(
                 {
                     "prompt_id": _hash_prompt(item["prompt"]),
+                    "prompt_text": prompt_text,
                     "input_token_ids": item["input_ids"],
                     # TODO: Add a privacy mode to store only token hashes/redacted ids.
                     "input_token_ids_hash": _hash_token_ids(item["input_ids"]),
                     "generated_token_ids": item["output_ids"],
                     "scores": item.get("scores"),
+                    "topk_token_ids": item.get("topk_token_ids"),
+                    "topk_scores": item.get("topk_scores"),
                     "tokenizer_id": item.get("tokenizer_id") or args.model,
                     "decoding_max_new_tokens": args.max_new_tokens,
                     "decoding_do_sample": False,
