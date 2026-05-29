@@ -75,20 +75,34 @@ def _python_version_check() -> dict[str, Any]:
 
 
 def _writable_artifact_root_check(path: str) -> dict[str, Any]:
-    parent = os.path.abspath(path if os.path.isdir(path) else os.path.dirname(path) or ".")
+    parent = _nearest_existing_parent(path)
     if os.access(parent, os.W_OK):
         return _check(
             "artifact_root_writable",
             "PASS",
-            f"Artifact root parent is writable: {parent}",
+            f"Nearest existing artifact root parent is writable: {parent}",
             "No action needed.",
         )
     return _check(
         "artifact_root_writable",
         "FAIL",
-        f"Artifact root parent is not writable: {parent}",
+        f"Nearest existing artifact root parent is not writable: {parent}",
         "Choose a writable artifact_root in detllm.config.json.",
     )
+
+
+def _nearest_existing_parent(path: str) -> str:
+    candidate = os.path.abspath(path)
+    if not os.path.isdir(candidate):
+        candidate = os.path.dirname(candidate) or "."
+
+    while not os.path.exists(candidate):
+        parent = os.path.dirname(candidate)
+        if parent == candidate:
+            break
+        candidate = parent
+
+    return candidate
 
 
 def _import_check(module: str, code: str, remediation: str) -> dict[str, Any]:
