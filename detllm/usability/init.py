@@ -36,7 +36,7 @@ def init_project(
     existing = [str(path) for path in [config_path, prompt_path] if path.exists()]
     if existing and not force:
         raise FileExistsError(
-            f"Generated files already exists; refusing to overwrite: {', '.join(existing)}"
+            f"Generated files already exist; refusing to overwrite: {', '.join(existing)}"
         )
 
     with config_path.open("w", encoding="utf-8") as handle:

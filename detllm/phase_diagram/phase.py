@@ -88,8 +88,8 @@ def parse_axis_values(axis_items: list[str]) -> dict[str, list[Any]]:
         name = name.strip()
         if name not in SUPPORTED_AXES:
             raise ValueError(f"Unsupported phase axis: {name}")
-        values = [_coerce_axis_value(name, value.strip()) for value in raw_values.split(",")]
-        values = [value for value in values if value != ""]
+        raw_parts = [value.strip() for value in raw_values.split(",")]
+        values = [_coerce_axis_value(name, value) for value in raw_parts if value]
         if not values:
             raise ValueError(f"Phase axis {name} must include at least one value")
         axes[name] = values

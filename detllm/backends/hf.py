@@ -153,7 +153,8 @@ def _token_topk_logprobs(
     scores_out: list[list[float]] = []
     for scores in score_tensors:
         log_probs = torch_f.log_softmax(scores[batch_index], dim=-1)
-        top_values, top_indices = log_probs.topk(top_k)
+        safe_top_k = min(top_k, int(log_probs.shape[-1]))
+        top_values, top_indices = log_probs.topk(safe_top_k)
         token_ids.append([int(token_id) for token_id in top_indices.tolist()])
         scores_out.append([float(value) for value in top_values.tolist()])
     return token_ids, scores_out

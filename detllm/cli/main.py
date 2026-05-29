@@ -160,7 +160,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--capture-topk-scores",
         type=int,
         default=0,
-        help="Capture top-k logprobs per generated token when score capture is enabled",
+        help="Capture top-k logprobs per generated token for margin debugging",
     )
     run_parser.add_argument(
         "--include-token-text",
@@ -222,7 +222,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--capture-topk-scores",
         type=int,
         default=0,
-        help="Capture top-k logprobs per generated token when score capture is enabled",
+        help="Capture top-k logprobs per generated token for margin debugging",
     )
     check_parser.add_argument(
         "--include-token-text",

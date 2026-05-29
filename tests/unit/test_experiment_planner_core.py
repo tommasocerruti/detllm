@@ -110,6 +110,7 @@ def test_boundary_strategy_detects_numeric_class_transitions():
     ]
     assert plan.recommendations[0].suggested_overrides["axis"] == "batch_size"
     assert plan.recommendations[0].source_cell_ids == ["fragile-2", "unstable-4"]
+    assert "--axis batch_size=2,4" in plan.recommendations[0].command_hint
 
 
 def test_unsupported_strategy_is_rejected():

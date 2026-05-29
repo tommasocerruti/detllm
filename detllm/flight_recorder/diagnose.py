@@ -135,7 +135,7 @@ def _collect_evidence(
         evidence.append(
             {
                 "code": "vllm_tier0",
-                "message": "The vLLM adapter is measurement-only in detLLM v1.",
+                "message": "The vLLM adapter is currently measurement-only.",
                 "data": {"backend": "vllm"},
             }
         )

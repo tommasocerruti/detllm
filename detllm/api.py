@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 from detllm.backends.base import BackendAdapter
 from detllm.core.artifacts import dump_json, validate_artifact
@@ -17,6 +17,10 @@ from detllm.report.render_text import render_report
 from detllm.report.report import Report
 from detllm.trace.io import write_trace
 from detllm.version import __version__
+
+if TYPE_CHECKING:
+    from detllm.flight_recorder.diagnose import Diagnosis
+    from detllm.flight_recorder.replay import ReplayResult
 
 
 @dataclass(frozen=True)
@@ -310,7 +314,7 @@ def diagnose(
     out_dir: str | None = None,
     include_token_text: bool = False,
     validate_schema: bool = False,
-):
+) -> "Diagnosis":
     from detllm.flight_recorder.diagnose import diagnose_directory
 
     return diagnose_directory(
@@ -329,7 +333,7 @@ def replay(
     capture_topk_scores: int = 5,
     validate_schema: bool = False,
     backend_adapter: BackendAdapter | None = None,
-):
+) -> "ReplayResult":
     from detllm.flight_recorder.replay import replay_directory
 
     return replay_directory(

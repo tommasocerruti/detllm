@@ -118,8 +118,13 @@ print(report.status, report.category)
 ## Flight Recorder
 
 `detllm diagnose --in artifacts/check1` ranks likely causes for a repro pack and
-writes `diagnosis.json` + `diagnosis.txt`. `detllm replay --in artifacts/check1
---probe auto` runs targeted local probes when prompt text was captured with
+writes `diagnosis.json` + `diagnosis.txt`.
+
+```bash
+detllm replay --in artifacts/check1 --probe auto
+```
+
+The replay command runs targeted local probes when prompt text was captured with
 `--include-token-text`.
 
 ## Reproducibility Phase Diagram

@@ -37,7 +37,7 @@ def test_init_creates_config_and_prompt_file(tmp_path):
 def test_init_refuses_overwrite_without_force(tmp_path):
     init_project(str(tmp_path))
 
-    with pytest.raises(FileExistsError, match="already exists"):
+    with pytest.raises(FileExistsError, match="already exist"):
         init_project(str(tmp_path))
 
 

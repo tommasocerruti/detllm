@@ -27,6 +27,12 @@ def test_parse_axis_values_accepts_supported_axes():
     }
 
 
+def test_parse_axis_values_ignores_empty_values_before_numeric_coercion():
+    axes = parse_axis_values(["batch_size=1,"])
+
+    assert axes == {"batch_size": [1]}
+
+
 def test_parse_axis_values_rejects_unknown_axis():
     with pytest.raises(ValueError, match="Unsupported phase axis"):
         parse_axis_values(["device=cpu,cuda"])

@@ -1,5 +1,8 @@
 import argparse
 
+import pytest
+
+from detllm.backends.hf import _token_topk_logprobs
 from detllm.cli import main as cli_main
 
 
@@ -60,3 +63,17 @@ def test_trace_model_accepts_topk_fields():
     )
 
     assert rows[0]["topk_token_ids"] == [[2, 3]]
+
+
+def test_hf_topk_capture_clamps_to_vocab_size():
+    torch = pytest.importorskip("torch")
+
+    token_ids, scores = _token_topk_logprobs(
+        [torch.tensor([[1.0, 3.0]])],
+        batch_index=0,
+        torch_f=torch.nn.functional,
+        top_k=10,
+    )
+
+    assert token_ids == [[1, 0]]
+    assert len(scores[0]) == 2

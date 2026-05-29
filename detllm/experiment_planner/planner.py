@@ -379,7 +379,8 @@ def _rank_candidates(
 
 def _command_hint(candidate: _Candidate) -> str:
     axis_args = " ".join(
-        f"--axis {name}={value}" for name, value in sorted(candidate.axes.items())
+        f"--axis {name}={_format_axis_value(value)}"
+        for name, value in sorted(candidate.axes.items())
     )
     override_args = " ".join(
         f"--{name.replace('_', '-')} {value}"
@@ -389,6 +390,12 @@ def _command_hint(candidate: _Candidate) -> str:
     return " ".join(
         part for part in ["detllm phase", axis_args, override_args] if part
     )
+
+
+def _format_axis_value(value: Any) -> str:
+    if isinstance(value, list):
+        return ",".join(str(item) for item in value)
+    return str(value)
 
 
 def _merge_axes(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
@@ -404,4 +411,4 @@ def _class_weight(classification: str | None) -> int:
 
 
 def _is_number(value: Any) -> bool:
-    return isinstance(value, int | float) and not isinstance(value, bool)
+    return isinstance(value, (int, float)) and not isinstance(value, bool)

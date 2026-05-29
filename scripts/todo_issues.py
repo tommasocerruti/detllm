@@ -5,13 +5,11 @@ import hashlib
 import json
 import os
 import re
-import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator
-
 
 SKIP_DIRS = {
     ".git",
@@ -24,6 +22,7 @@ SKIP_DIRS = {
 }
 
 TODO_RE = re.compile(r"\bTODO\b[:\- ]?(.*)")
+GITHUB_REQUEST_TIMEOUT_SECONDS = 30
 
 
 @dataclass(frozen=True)
@@ -79,7 +78,7 @@ def _github_request(
             "User-Agent": "detllm-todo-bot",
         },
     )
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, timeout=GITHUB_REQUEST_TIMEOUT_SECONDS) as resp:
         body = resp.read().decode("utf-8")
     return json.loads(body) if body else {}
 
