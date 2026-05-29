@@ -13,6 +13,9 @@ SCHEMA_MAP = {
     "report": "report",
     "diagnosis": "diagnosis",
     "replay": "replay",
+    "phase_diagram": "phase_diagram",
+    "analysis": "analysis",
+    "experiment_plan": "experiment_plan",
 }
 
 

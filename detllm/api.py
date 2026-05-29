@@ -343,6 +343,91 @@ def replay(
     )
 
 
+def phase(
+    *,
+    backend: str,
+    model: str,
+    prompts: Sequence[str],
+    axes: dict[str, list[Any]],
+    runs: int = 3,
+    tier: int = 1,
+    mode: str = "best-effort",
+    seed: int = 0,
+    temperature: float = 0.0,
+    top_p: float = 1.0,
+    top_k: int = 0,
+    device: str = "cpu",
+    capture_topk_scores: int = 0,
+    out_dir: str = "artifacts/phase",
+    max_cells: int | None = None,
+    dry_run: bool = False,
+    validate_schema: bool = False,
+    include_token_text: bool = False,
+    backend_adapter: BackendAdapter | None = None,
+):
+    from detllm.phase_diagram.runner import run_phase
+
+    return run_phase(
+        backend=backend,
+        model=model,
+        prompts=prompts,
+        axes=axes,
+        runs=runs,
+        tier=tier,
+        mode=mode,
+        seed=seed,
+        temperature=temperature,
+        top_p=top_p,
+        top_k=top_k,
+        device=device,
+        capture_topk_scores=capture_topk_scores,
+        out_dir=out_dir,
+        max_cells=max_cells,
+        dry_run=dry_run,
+        validate_schema=validate_schema,
+        include_token_text=include_token_text,
+        backend_adapter=backend_adapter,
+    )
+
+
+def analyze(
+    in_dir: str,
+    *,
+    out_dir: str | None = None,
+    confidence: float = 0.95,
+    validate_schema: bool = False,
+):
+    from detllm.analysis.analysis import analyze_phase_directory
+
+    return analyze_phase_directory(
+        in_dir,
+        out_dir=out_dir,
+        confidence=confidence,
+        validate_schema=validate_schema,
+    )
+
+
+def recommend(
+    in_dir: str,
+    *,
+    out_dir: str | None = None,
+    budget_cells: int = 8,
+    strategy: str = "auto",
+    confidence: float = 0.95,
+    validate_schema: bool = False,
+):
+    from detllm.experiment_planner.planner import recommend_phase_directory
+
+    return recommend_phase_directory(
+        in_dir,
+        out_dir=out_dir,
+        budget_cells=budget_cells,
+        strategy=strategy,
+        confidence=confidence,
+        validate_schema=validate_schema,
+    )
+
+
 def _build_args(**kwargs: Any) -> Any:
     class _Args:
         pass

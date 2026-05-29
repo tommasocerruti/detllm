@@ -44,6 +44,80 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--quiet", action="store_true", help="Reduce logging output")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    init_parser = subparsers.add_parser("init", help="Create a starter detLLM config")
+    init_parser.add_argument(
+        "--out",
+        required=False,
+        default=".",
+        help="Directory for detllm.config.json and prompts.jsonl",
+    )
+    init_parser.add_argument(
+        "--profile",
+        required=False,
+        default="local-debug",
+        help="Starter profile to create",
+    )
+    init_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing generated files",
+    )
+
+    doctor_parser = subparsers.add_parser("doctor", help="Check local detLLM setup")
+    doctor_parser.add_argument(
+        "--config",
+        required=False,
+        default="detllm.config.json",
+        help="Project config path",
+    )
+    doctor_parser.add_argument(
+        "--backend",
+        choices=["hf", "vllm"],
+        required=False,
+        help="Backend extra to check",
+    )
+    doctor_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON",
+    )
+
+    inspect_parser = subparsers.add_parser("inspect", help="Summarize detLLM artifacts")
+    inspect_parser.add_argument(
+        "--in",
+        dest="inspect_in",
+        required=False,
+        help="Artifact directory",
+    )
+    inspect_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON",
+    )
+
+    profile_parser = subparsers.add_parser("profile", help="Run workflows from config")
+    profile_subparsers = profile_parser.add_subparsers(dest="profile_command", required=True)
+    profile_list_parser = profile_subparsers.add_parser("list", help="List configured profiles")
+    profile_list_parser.add_argument(
+        "--config",
+        required=False,
+        default="detllm.config.json",
+        help="Project config path",
+    )
+    profile_run_parser = profile_subparsers.add_parser("run", help="Run a configured profile")
+    profile_run_parser.add_argument("name", help="Profile name")
+    profile_run_parser.add_argument(
+        "--config",
+        required=False,
+        default="detllm.config.json",
+        help="Project config path",
+    )
+    profile_run_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the resolved command without executing it",
+    )
+
     env_parser = subparsers.add_parser("env", help="Capture an environment snapshot")
     env_parser.add_argument(
         "--out",
@@ -272,6 +346,126 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate replay.json against schema",
     )
+    phase_parser = subparsers.add_parser(
+        "phase", help="Sweep inference variables into a reproducibility phase diagram"
+    )
+    phase_parser.add_argument("--backend", required=False, default="hf", help="Backend adapter")
+    phase_parser.add_argument("--model", required=False, help="Model id or path")
+    phase_parser.add_argument("--prompt", required=False, help="Single prompt")
+    phase_parser.add_argument("--prompt-file", required=False, help="JSONL file of prompts")
+    phase_parser.add_argument(
+        "--axis",
+        action="append",
+        default=[],
+        help="Phase axis in name=value1,value2 syntax; repeatable",
+    )
+    phase_parser.add_argument("--tier", type=int, default=1, help="Determinism tier")
+    phase_parser.add_argument("--runs", type=int, default=3, help="Number of runs per cell")
+    phase_parser.add_argument("--seed", type=int, default=0, help="Seed for determinism controls")
+    phase_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=0,
+        help="Capture top-k logprobs per generated token for fragility analysis",
+    )
+    phase_parser.add_argument(
+        "--temperature", type=float, default=0.0, help="Sampling temperature"
+    )
+    phase_parser.add_argument("--top-p", type=float, default=1.0, help="Top-p nucleus sampling")
+    phase_parser.add_argument(
+        "--top-k", type=int, default=0, help="Top-k sampling (0 disables)"
+    )
+    phase_parser.add_argument("--device", default="cpu", help="Device")
+    phase_parser.add_argument("--mode", choices=["strict", "best-effort"], default="best-effort")
+    phase_parser.add_argument(
+        "--max-cells",
+        type=int,
+        required=False,
+        help="Maximum number of cells to execute after deterministic grid expansion",
+    )
+    phase_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Write the planned grid without model inference",
+    )
+    phase_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in cell traces",
+    )
+    phase_parser.add_argument(
+        "--out",
+        required=False,
+        default="artifacts/phase",
+        help="Output directory for phase diagram artifacts",
+    )
+    phase_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate phase_diagram.json against schema",
+    )
+    analyze_parser = subparsers.add_parser(
+        "analyze", help="Analyze phase diagram statistics and reproducibility risk"
+    )
+    analyze_parser.add_argument(
+        "--in",
+        dest="analyze_in",
+        required=False,
+        help="Directory containing phase_diagram.json",
+    )
+    analyze_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for analysis artifacts",
+    )
+    analyze_parser.add_argument(
+        "--confidence",
+        type=float,
+        default=0.95,
+        help="Confidence level for Wilson intervals: 0.90, 0.95, or 0.99",
+    )
+    analyze_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate analysis.json against schema",
+    )
+    recommend_parser = subparsers.add_parser(
+        "recommend", help="Plan adaptive follow-up experiments from a phase diagram"
+    )
+    recommend_parser.add_argument(
+        "--in",
+        dest="recommend_in",
+        required=False,
+        help="Directory containing phase_diagram.json",
+    )
+    recommend_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for experiment_plan artifacts",
+    )
+    recommend_parser.add_argument(
+        "--budget-cells",
+        type=int,
+        default=8,
+        help="Maximum number of follow-up experiment recommendations",
+    )
+    recommend_parser.add_argument(
+        "--strategy",
+        choices=["auto", "coverage", "fragility", "boundary"],
+        default="auto",
+        help="Recommendation strategy",
+    )
+    recommend_parser.add_argument(
+        "--confidence",
+        type=float,
+        default=0.95,
+        help="Confidence level for in-memory analysis when analysis.json is absent",
+    )
+    recommend_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate experiment_plan.json against schema",
+    )
 
     return parser
 
@@ -280,6 +474,57 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     configure_logging(verbose=getattr(args, "verbose", False), quiet=getattr(args, "quiet", False))
+
+    if args.command == "init":
+        from detllm.usability.init import init_project
+        from detllm.usability.render import render_init
+
+        result = init_project(args.out, profile=args.profile, force=args.force)
+        print(render_init(result), end="")
+        return 0
+
+    if args.command == "doctor":
+        from detllm.usability.doctor import run_doctor
+        from detllm.usability.render import render_doctor
+
+        report = run_doctor(config_path=args.config, backend=args.backend)
+        if args.json:
+            print(json.dumps(report, indent=2, sort_keys=True))
+        else:
+            print(render_doctor(report), end="")
+        return 0 if report["status"] in {"PASS", "WARN"} else 1
+
+    if args.command == "inspect":
+        if not args.inspect_in:
+            parser.error("--in is required for inspect")
+        from detllm.usability.inspect import inspect_artifact_dir
+        from detllm.usability.render import render_inspection
+
+        summary = inspect_artifact_dir(args.inspect_in)
+        if args.json:
+            print(json.dumps(summary, indent=2, sort_keys=True))
+        else:
+            print(render_inspection(summary), end="")
+        return 0
+
+    if args.command == "profile":
+        from detllm.usability.config import (
+            load_project_config,
+            profile_rows,
+            render_profile_command,
+        )
+        from detllm.usability.render import render_profile_list
+
+        config = load_project_config(args.config)
+        if args.profile_command == "list":
+            print(render_profile_list(profile_rows(config)), end="")
+            return 0
+        if args.profile_command == "run":
+            command = render_profile_command(config, args.name)
+            if args.dry_run:
+                print(" ".join(command))
+                return 0
+            return main(command[1:])
 
     if args.command == "env":
         snapshot = capture_env(**_redact_kwargs(args))
@@ -592,6 +837,69 @@ def main(argv: list[str] | None = None) -> int:
             validate_schema=args.validate_schema,
         )
         logger.info("Wrote replay artifacts to %s", result.out_dir)
+        return 0
+
+    if args.command == "phase":
+        if not args.model:
+            parser.error("--model is required for phase")
+        prompts = _load_prompts(args)
+        if not prompts:
+            parser.error("Prompt input is required via --prompt or --prompt-file")
+        from detllm.phase_diagram.phase import parse_axis_values
+        from detllm.phase_diagram.runner import run_phase
+
+        axes = parse_axis_values(args.axis)
+        diagram = run_phase(
+            backend=args.backend,
+            model=args.model,
+            prompts=prompts,
+            axes=axes,
+            runs=args.runs,
+            tier=args.tier,
+            mode=args.mode,
+            seed=args.seed,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            top_k=args.top_k,
+            device=args.device,
+            capture_topk_scores=args.capture_topk_scores,
+            out_dir=args.out,
+            max_cells=args.max_cells,
+            dry_run=args.dry_run,
+            validate_schema=args.validate_schema,
+            include_token_text=args.include_token_text,
+        )
+        logger.info("Wrote phase diagram artifacts to %s", diagram.out_dir)
+        return 0
+
+    if args.command == "analyze":
+        if not args.analyze_in:
+            parser.error("--in is required for analyze")
+        from detllm.analysis.analysis import analyze_phase_directory
+
+        result = analyze_phase_directory(
+            args.analyze_in,
+            out_dir=args.out,
+            confidence=args.confidence,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote analysis artifacts to %s", result.out_dir)
+        return 0
+
+    if args.command == "recommend":
+        if not args.recommend_in:
+            parser.error("--in is required for recommend")
+        from detllm.experiment_planner.planner import recommend_phase_directory
+
+        plan = recommend_phase_directory(
+            args.recommend_in,
+            out_dir=args.out,
+            budget_cells=args.budget_cells,
+            strategy=args.strategy,
+            confidence=args.confidence,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote experiment plan artifacts to %s", plan.out_dir)
         return 0
 
     return 0
