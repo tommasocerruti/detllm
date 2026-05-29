@@ -1,0 +1,3 @@
+{"prompt": "Classify sentiment as positive or negative: the benchmark result was stable across reruns."}
+{"prompt": "Answer with JSON only: {\"label\": \"stable\"} or {\"label\": \"unstable\"}. The logits changed after batching."}
+{"prompt": "Choose the most likely token: reproducibility requires careful control of"}
