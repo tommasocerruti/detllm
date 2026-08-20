@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["artifact_type", "path", "status"],
+  "properties": {
+    "artifact_type": {"type": "string"},
+    "path": {"type": "string"},
+    "status": {"type": "string"},
+    "category": {"type": ["string", "null"]},
+    "next_command": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

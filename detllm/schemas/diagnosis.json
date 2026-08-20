@@ -1,0 +1,29 @@
+{
+  "description": "Stable schema. Only additive changes within the same major version.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "detLLM Diagnosis",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "detllm_version",
+    "artifact_type",
+    "status",
+    "category",
+    "summary",
+    "causes",
+    "evidence",
+    "probe_plan"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "detllm_version": {"type": "string"},
+    "artifact_type": {"const": "diagnosis"},
+    "status": {"type": "string"},
+    "category": {"type": "string"},
+    "summary": {"type": "string"},
+    "causes": {"type": "array", "items": {"type": "object"}},
+    "evidence": {"type": "array", "items": {"type": "object"}},
+    "probe_plan": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

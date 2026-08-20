@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["status", "checks"],
+  "properties": {
+    "status": {"enum": ["PASS", "WARN", "FAIL"]},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "status", "summary", "remediation"],
+        "properties": {
+          "code": {"type": "string"},
+          "status": {"enum": ["PASS", "WARN", "FAIL"]},
+          "summary": {"type": "string"},
+          "remediation": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

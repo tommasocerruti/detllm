@@ -14,6 +14,8 @@ detllm run --backend hf --model distilgpt2 --prompt "Hello" --tier 1 --batch-siz
 detllm check --backend hf --model distilgpt2 --prompt "Hello" --tier 1 --runs 3 --batch-size 1 --out artifacts/check1
 
 detllm check --backend hf --model distilgpt2 --prompt "Hello" --tier 1 --runs 3 --batch-size 1 --vary-batch 1,2 --out artifacts/check2
+
+detllm diagnose --in artifacts/check2
 ```
 
 ## What to expect
@@ -31,6 +33,10 @@ After `detllm check`:
 - `artifacts/check1/traces/run_0.jsonl` (and run_1/run_2): per-run traces.
 - `artifacts/check1/report.json` + `report.txt`: PASS/FAIL with details.
 - `artifacts/check1/diffs/first_divergence.json`: only present when a divergence is found.
+
+After `detllm diagnose`:
+- `artifacts/check2/diagnosis.json`: ranked likely causes and probe plan.
+- `artifacts/check2/diagnosis.txt`: text summary for local debugging.
 
 ## Interpreting the report
 
@@ -80,6 +86,12 @@ head -n 1 artifacts/check_t2/traces/run_0.jsonl
 ```
 
 You should see a `scores` field containing per-token logprobs.
+
+Top-k score margins are optional:
+
+```bash
+detllm check --backend hf --model distilgpt2 --prompt "Hello" --tier 2 --runs 2 --capture-topk-scores 5 --out artifacts/check_topk
+```
 
 ## CI note
 

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "detllm_version",
+    "artifact_type",
+    "strategy",
+    "budget_cells",
+    "analysis_summary",
+    "recommendations"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "detllm_version": {"type": "string"},
+    "artifact_type": {"const": "experiment_plan"},
+    "strategy": {"type": "string"},
+    "budget_cells": {"type": "integer"},
+    "phase_dir": {"type": ["string", "null"]},
+    "analysis_summary": {"type": "object"},
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rank",
+          "recommendation_type",
+          "score",
+          "axes",
+          "reason",
+          "source_cell_ids",
+          "suggested_overrides",
+          "command_hint"
+        ],
+        "properties": {
+          "rank": {"type": "integer"},
+          "recommendation_type": {"type": "string"},
+          "score": {"type": "number"},
+          "axes": {"type": "object"},
+          "reason": {"type": "string"},
+          "source_cell_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "suggested_overrides": {"type": "object"},
+          "command_hint": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

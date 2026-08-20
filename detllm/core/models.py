@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -80,16 +80,19 @@ class DeterminismAppliedRecord:
 @dataclass(frozen=True)
 class TokenTraceRow:
     prompt_id: str
-    input_token_ids: list[int]
-    input_token_ids_hash: str
     generated_token_ids: list[int]
-    scores: list[float] | None
+    input_token_ids: list[int] = field(default_factory=list)
+    input_token_ids_hash: str | None = None
+    scores: list[float] | None = None
     tokenizer_id: str | None = None
     decoding_max_new_tokens: int | None = None
     decoding_do_sample: bool | None = None
     decoding_temperature: float | None = None
     decoding_top_p: float | None = None
     decoding_top_k: int | None = None
+    topk_token_ids: list[list[int]] | None = None
+    topk_scores: list[list[float]] | None = None
+    prompt_text: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TokenTraceRow":

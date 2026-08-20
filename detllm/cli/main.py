@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import os
-import sys
 from typing import Any
 
 from detllm.backends.base import BackendAdapter
@@ -24,11 +23,11 @@ from detllm.core.deterministic import DeterministicContext
 from detllm.core.env import capture_env
 from detllm.core.models import DeterminismAppliedRecord, EnvSnapshot, RunConfig, TokenTraceRow
 from detllm.diff.diff import aggregate_diffs, diff_traces
+from detllm.logging import configure_logging, get_logger
 from detllm.report.render_text import render_report
 from detllm.report.report import Report
 from detllm.trace.io import read_trace, write_trace
 from detllm.version import __version__
-from detllm.logging import configure_logging, get_logger
 
 logger = get_logger("cli")
 
@@ -44,6 +43,80 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--quiet", action="store_true", help="Reduce logging output")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init_parser = subparsers.add_parser("init", help="Create a starter detLLM config")
+    init_parser.add_argument(
+        "--out",
+        required=False,
+        default=".",
+        help="Directory for detllm.config.json and prompts.jsonl",
+    )
+    init_parser.add_argument(
+        "--profile",
+        required=False,
+        default="local-debug",
+        help="Starter profile to create",
+    )
+    init_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing generated files",
+    )
+
+    doctor_parser = subparsers.add_parser("doctor", help="Check local detLLM setup")
+    doctor_parser.add_argument(
+        "--config",
+        required=False,
+        default="detllm.config.json",
+        help="Project config path",
+    )
+    doctor_parser.add_argument(
+        "--backend",
+        choices=["hf", "vllm"],
+        required=False,
+        help="Backend extra to check",
+    )
+    doctor_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON",
+    )
+
+    inspect_parser = subparsers.add_parser("inspect", help="Summarize detLLM artifacts")
+    inspect_parser.add_argument(
+        "--in",
+        dest="inspect_in",
+        required=False,
+        help="Artifact directory",
+    )
+    inspect_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable JSON",
+    )
+
+    profile_parser = subparsers.add_parser("profile", help="Run workflows from config")
+    profile_subparsers = profile_parser.add_subparsers(dest="profile_command", required=True)
+    profile_list_parser = profile_subparsers.add_parser("list", help="List configured profiles")
+    profile_list_parser.add_argument(
+        "--config",
+        required=False,
+        default="detllm.config.json",
+        help="Project config path",
+    )
+    profile_run_parser = profile_subparsers.add_parser("run", help="Run a configured profile")
+    profile_run_parser.add_argument("name", help="Profile name")
+    profile_run_parser.add_argument(
+        "--config",
+        required=False,
+        default="detllm.config.json",
+        help="Project config path",
+    )
+    profile_run_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the resolved command without executing it",
+    )
 
     env_parser = subparsers.add_parser("env", help="Capture an environment snapshot")
     env_parser.add_argument(
@@ -83,6 +156,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seed for determinism controls (defaults to 0 when omitted)",
     )
     run_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
+    run_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=0,
+        help="Capture top-k logprobs per generated token for margin debugging",
+    )
+    run_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in traces for local replay debugging",
+    )
     run_parser.add_argument(
         "--temperature", type=float, default=0.0, help="Sampling temperature"
     )
@@ -134,6 +218,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check_parser.add_argument("--seed", type=int, default=0, help="Seed for determinism controls")
     check_parser.add_argument("--max-new-tokens", type=int, default=32, help="Max new tokens")
+    check_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=0,
+        help="Capture top-k logprobs per generated token for margin debugging",
+    )
+    check_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in traces for local replay debugging",
+    )
     check_parser.add_argument(
         "--temperature", type=float, default=0.0, help="Sampling temperature"
     )
@@ -202,6 +297,175 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate report.json against schema",
     )
+    diagnose_parser = subparsers.add_parser(
+        "diagnose", help="Analyze check artifacts and rank likely causes"
+    )
+    diagnose_parser.add_argument("--in", dest="diagnose_in", required=False, help="Check directory")
+    diagnose_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for diagnosis artifacts",
+    )
+    diagnose_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Render token text when present in artifacts",
+    )
+    diagnose_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate diagnosis.json against schema",
+    )
+
+    replay_parser = subparsers.add_parser("replay", help="Run targeted replay probes")
+    replay_parser.add_argument("--in", dest="replay_in", required=False, help="Check directory")
+    replay_parser.add_argument(
+        "--probe",
+        choices=["auto", "isolate-prompts", "batch-shape", "score-margins", "tier2"],
+        default="auto",
+        help="Replay probe to run",
+    )
+    replay_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for replay artifacts",
+    )
+    replay_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in replay traces",
+    )
+    replay_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=5,
+        help="Top-k scores to capture for score-margin replay probes",
+    )
+    replay_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate replay.json against schema",
+    )
+    phase_parser = subparsers.add_parser(
+        "phase", help="Sweep inference variables into a reproducibility phase diagram"
+    )
+    phase_parser.add_argument("--backend", required=False, default="hf", help="Backend adapter")
+    phase_parser.add_argument("--model", required=False, help="Model id or path")
+    phase_parser.add_argument("--prompt", required=False, help="Single prompt")
+    phase_parser.add_argument("--prompt-file", required=False, help="JSONL file of prompts")
+    phase_parser.add_argument(
+        "--axis",
+        action="append",
+        default=[],
+        help="Phase axis in name=value1,value2 syntax; repeatable",
+    )
+    phase_parser.add_argument("--tier", type=int, default=1, help="Determinism tier")
+    phase_parser.add_argument("--runs", type=int, default=3, help="Number of runs per cell")
+    phase_parser.add_argument("--seed", type=int, default=0, help="Seed for determinism controls")
+    phase_parser.add_argument(
+        "--capture-topk-scores",
+        type=int,
+        default=0,
+        help="Capture top-k logprobs per generated token for fragility analysis",
+    )
+    phase_parser.add_argument(
+        "--temperature", type=float, default=0.0, help="Sampling temperature"
+    )
+    phase_parser.add_argument("--top-p", type=float, default=1.0, help="Top-p nucleus sampling")
+    phase_parser.add_argument(
+        "--top-k", type=int, default=0, help="Top-k sampling (0 disables)"
+    )
+    phase_parser.add_argument("--device", default="cpu", help="Device")
+    phase_parser.add_argument("--mode", choices=["strict", "best-effort"], default="best-effort")
+    phase_parser.add_argument(
+        "--max-cells",
+        type=int,
+        required=False,
+        help="Maximum number of cells to execute after deterministic grid expansion",
+    )
+    phase_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Write the planned grid without model inference",
+    )
+    phase_parser.add_argument(
+        "--include-token-text",
+        action="store_true",
+        help="Store prompt text in cell traces",
+    )
+    phase_parser.add_argument(
+        "--out",
+        required=False,
+        default="artifacts/phase",
+        help="Output directory for phase diagram artifacts",
+    )
+    phase_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate phase_diagram.json against schema",
+    )
+    analyze_parser = subparsers.add_parser(
+        "analyze", help="Analyze phase diagram statistics and reproducibility risk"
+    )
+    analyze_parser.add_argument(
+        "--in",
+        dest="analyze_in",
+        required=False,
+        help="Directory containing phase_diagram.json",
+    )
+    analyze_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for analysis artifacts",
+    )
+    analyze_parser.add_argument(
+        "--confidence",
+        type=float,
+        default=0.95,
+        help="Confidence level for Wilson intervals: 0.90, 0.95, or 0.99",
+    )
+    analyze_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate analysis.json against schema",
+    )
+    recommend_parser = subparsers.add_parser(
+        "recommend", help="Plan adaptive follow-up experiments from a phase diagram"
+    )
+    recommend_parser.add_argument(
+        "--in",
+        dest="recommend_in",
+        required=False,
+        help="Directory containing phase_diagram.json",
+    )
+    recommend_parser.add_argument(
+        "--out",
+        required=False,
+        help="Output directory for experiment_plan artifacts",
+    )
+    recommend_parser.add_argument(
+        "--budget-cells",
+        type=int,
+        default=8,
+        help="Maximum number of follow-up experiment recommendations",
+    )
+    recommend_parser.add_argument(
+        "--strategy",
+        choices=["auto", "coverage", "fragility", "boundary"],
+        default="auto",
+        help="Recommendation strategy",
+    )
+    recommend_parser.add_argument(
+        "--confidence",
+        type=float,
+        default=0.95,
+        help="Confidence level for in-memory analysis when analysis.json is absent",
+    )
+    recommend_parser.add_argument(
+        "--validate-schema",
+        action="store_true",
+        help="Validate experiment_plan.json against schema",
+    )
 
     return parser
 
@@ -210,6 +474,57 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     configure_logging(verbose=getattr(args, "verbose", False), quiet=getattr(args, "quiet", False))
+
+    if args.command == "init":
+        from detllm.usability.init import init_project
+        from detllm.usability.render import render_init
+
+        result = init_project(args.out, profile=args.profile, force=args.force)
+        print(render_init(result), end="")
+        return 0
+
+    if args.command == "doctor":
+        from detllm.usability.doctor import run_doctor
+        from detllm.usability.render import render_doctor
+
+        report = run_doctor(config_path=args.config, backend=args.backend)
+        if args.json:
+            print(json.dumps(report, indent=2, sort_keys=True))
+        else:
+            print(render_doctor(report), end="")
+        return 0 if report["status"] in {"PASS", "WARN"} else 1
+
+    if args.command == "inspect":
+        if not args.inspect_in:
+            parser.error("--in is required for inspect")
+        from detllm.usability.inspect import inspect_artifact_dir
+        from detllm.usability.render import render_inspection
+
+        summary = inspect_artifact_dir(args.inspect_in)
+        if args.json:
+            print(json.dumps(summary, indent=2, sort_keys=True))
+        else:
+            print(render_inspection(summary), end="")
+        return 0
+
+    if args.command == "profile":
+        from detllm.usability.config import (
+            load_project_config,
+            profile_rows,
+            render_profile_command,
+        )
+        from detllm.usability.render import render_profile_list
+
+        config = load_project_config(args.config)
+        if args.profile_command == "list":
+            print(render_profile_list(profile_rows(config)), end="")
+            return 0
+        if args.profile_command == "run":
+            command = render_profile_command(config, args.name)
+            if args.dry_run:
+                print(" ".join(command))
+                return 0
+            return main(command[1:])
 
     if args.command == "env":
         snapshot = capture_env(**_redact_kwargs(args))
@@ -238,7 +553,12 @@ def main(argv: list[str] | None = None) -> int:
 
         with DeterministicContext(args.tier, args.mode, args.seed) as ctx:
             backend = _build_backend(args)
-            decision = evaluate_capabilities(ctx.applied, backend.capabilities(), args.tier, args.mode)
+            decision = evaluate_capabilities(
+                ctx.applied,
+                backend.capabilities(),
+                args.tier,
+                args.mode,
+            )
             if not decision.supported:
                 _write_unsupported(
                     args.out,
@@ -252,7 +572,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return 2
             trace_rows = _run_generation(
-                backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
+                backend,
+                prompts,
+                args,
+                capture_scores=ctx.applied.tier_effective >= 2,
+                capture_topk_scores=args.capture_topk_scores,
             )
 
         determinism_payload = _coerce_determinism(ctx.applied.to_dict())
@@ -345,7 +669,11 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     return 2
                 trace_rows = _run_generation(
-                    backend, prompts, args, capture_scores=ctx.applied.tier_effective >= 2
+                    backend,
+                    prompts,
+                    args,
+                    capture_scores=ctx.applied.tier_effective >= 2,
+                    capture_topk_scores=args.capture_topk_scores,
                 )
 
             traces.append(trace_rows)
@@ -381,6 +709,7 @@ def main(argv: list[str] | None = None) -> int:
                         prompts,
                         batch_args,
                         capture_scores=ctx.applied.tier_effective >= 2,
+                        capture_topk_scores=args.capture_topk_scores,
                     )
                 batch_traces[batch_size] = trace_rows
                 trace_path = os.path.join(args.out, "traces", f"batch_{batch_size}.jsonl")
@@ -480,6 +809,99 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("Wrote report text to %s", args.out)
         return 0
 
+    if args.command == "diagnose":
+        if not args.diagnose_in:
+            parser.error("--in is required for diagnose")
+        from detllm.flight_recorder.diagnose import diagnose_directory
+
+        diagnosis = diagnose_directory(
+            args.diagnose_in,
+            out_dir=args.out,
+            include_token_text=args.include_token_text,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote diagnosis artifacts to %s", diagnosis.out_dir)
+        return 0
+
+    if args.command == "replay":
+        if not args.replay_in:
+            parser.error("--in is required for replay")
+        from detllm.flight_recorder.replay import replay_directory
+
+        result = replay_directory(
+            args.replay_in,
+            probe=args.probe,
+            out_dir=args.out,
+            include_token_text=args.include_token_text,
+            capture_topk_scores=args.capture_topk_scores,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote replay artifacts to %s", result.out_dir)
+        return 0
+
+    if args.command == "phase":
+        if not args.model:
+            parser.error("--model is required for phase")
+        prompts = _load_prompts(args)
+        if not prompts:
+            parser.error("Prompt input is required via --prompt or --prompt-file")
+        from detllm.phase_diagram.phase import parse_axis_values
+        from detllm.phase_diagram.runner import run_phase
+
+        axes = parse_axis_values(args.axis)
+        diagram = run_phase(
+            backend=args.backend,
+            model=args.model,
+            prompts=prompts,
+            axes=axes,
+            runs=args.runs,
+            tier=args.tier,
+            mode=args.mode,
+            seed=args.seed,
+            temperature=args.temperature,
+            top_p=args.top_p,
+            top_k=args.top_k,
+            device=args.device,
+            capture_topk_scores=args.capture_topk_scores,
+            out_dir=args.out,
+            max_cells=args.max_cells,
+            dry_run=args.dry_run,
+            validate_schema=args.validate_schema,
+            include_token_text=args.include_token_text,
+        )
+        logger.info("Wrote phase diagram artifacts to %s", diagram.out_dir)
+        return 0
+
+    if args.command == "analyze":
+        if not args.analyze_in:
+            parser.error("--in is required for analyze")
+        from detllm.analysis.analysis import analyze_phase_directory
+
+        result = analyze_phase_directory(
+            args.analyze_in,
+            out_dir=args.out,
+            confidence=args.confidence,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote analysis artifacts to %s", result.out_dir)
+        return 0
+
+    if args.command == "recommend":
+        if not args.recommend_in:
+            parser.error("--in is required for recommend")
+        from detllm.experiment_planner.planner import recommend_phase_directory
+
+        plan = recommend_phase_directory(
+            args.recommend_in,
+            out_dir=args.out,
+            budget_cells=args.budget_cells,
+            strategy=args.strategy,
+            confidence=args.confidence,
+            validate_schema=args.validate_schema,
+        )
+        logger.info("Wrote experiment plan artifacts to %s", plan.out_dir)
+        return 0
+
     return 0
 
 
@@ -530,6 +952,7 @@ def _run_generation(
     prompts: list[str],
     args: argparse.Namespace,
     capture_scores: bool = False,
+    capture_topk_scores: int = 0,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     batch_size = max(1, args.batch_size)
@@ -540,16 +963,21 @@ def _run_generation(
             max_new_tokens=args.max_new_tokens,
             do_sample=False,
             capture_scores=capture_scores,
+            capture_topk_scores=capture_topk_scores,
         )
         for item in results:
+            prompt_text = item["prompt"] if getattr(args, "include_token_text", False) else None
             rows.append(
                 {
                     "prompt_id": _hash_prompt(item["prompt"]),
+                    "prompt_text": prompt_text,
                     "input_token_ids": item["input_ids"],
                     # TODO: Add a privacy mode to store only token hashes/redacted ids.
                     "input_token_ids_hash": _hash_token_ids(item["input_ids"]),
                     "generated_token_ids": item["output_ids"],
                     "scores": item.get("scores"),
+                    "topk_token_ids": item.get("topk_token_ids"),
+                    "topk_scores": item.get("topk_scores"),
                     "tokenizer_id": item.get("tokenizer_id") or args.model,
                     "decoding_max_new_tokens": args.max_new_tokens,
                     "decoding_do_sample": False,

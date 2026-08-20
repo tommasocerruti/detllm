@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "artifact_root", "profiles"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "artifact_root": {"type": "string"},
+    "profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["command", "options"],
+        "properties": {
+          "command": {"type": "string"},
+          "options": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

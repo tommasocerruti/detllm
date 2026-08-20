@@ -11,6 +11,12 @@
   <a href="https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml">
     <img src="https://github.com/tommasocerruti/detllm/actions/workflows/ci.yml/badge.svg" alt="CI" />
   </a>
+  <a href="https://pypi.org/project/detllm/">
+    <img src="https://img.shields.io/pypi/v/detllm.svg" alt="PyPI" />
+  </a>
+  <a href="https://pypi.org/project/detllm/">
+    <img src="https://img.shields.io/pypi/pyversions/detllm.svg" alt="Python versions" />
+  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License" />
   </a>
@@ -30,12 +36,17 @@ detLLM verifies reproducibility for LLM inference and produces a minimal repro p
 
 ```bash
 pip install detllm
-detllm check --backend hf --model <model_id> \
-  --prompt "Choose one: A or B. Answer with a single letter." \
-  --tier 1 --runs 5 --batch-size 1
+detllm init --out .
+detllm doctor
+detllm profile run quick_check --dry-run
 ```
 
 Note: some shells (like zsh) require quotes when installing extras, e.g. `pip install 'detllm[test,hf]'`.
+
+## Examples
+
+See [docs/examples.md](docs/examples.md) for runnable local workflows covering
+`check`, `diagnose`, `replay`, `phase`, `analyze`, and `recommend`.
 
 ## Verification
 
@@ -94,6 +105,55 @@ print(report.status, report.category)
 - `detllm check`
 - `detllm diff`
 - `detllm report`
+- `detllm init`
+- `detllm doctor`
+- `detllm inspect`
+- `detllm profile`
+- `detllm diagnose`
+- `detllm replay`
+- `detllm phase`
+- `detllm analyze`
+- `detllm recommend`
+
+## Flight Recorder
+
+`detllm diagnose --in artifacts/check1` ranks likely causes for a repro pack and
+writes `diagnosis.json` + `diagnosis.txt`.
+
+```bash
+detllm replay --in artifacts/check1 --probe auto
+```
+
+The replay command runs targeted local probes when prompt text was captured with
+`--include-token-text`.
+
+## Reproducibility Phase Diagram
+
+`detllm phase` sweeps controlled inference variables such as `batch_size`,
+`dtype`, and `max_new_tokens`, then writes `phase_diagram.json`,
+`phase_diagram.csv`, and `phase_diagram.txt` with stable/fragile/unstable
+regions.
+
+## Statistical Analysis
+
+`detllm analyze --in artifacts/phase/distilgpt2` consumes a phase diagram and
+writes `analysis.json`, `analysis.csv`, and `analysis.txt` with Wilson
+confidence intervals, a reproducibility risk score, and recommended next
+experiments.
+
+## Adaptive Experiment Planner
+
+`detllm recommend --in artifacts/phase/distilgpt2` ranks follow-up cells to run
+next and writes `experiment_plan.json`, `experiment_plan.csv`, and
+`experiment_plan.txt`. V1 is recommend-only: it never loads a model or runs
+inference.
+
+## Onboarding helpers
+
+`detllm init` writes a starter `detllm.config.json` and `prompts.jsonl`.
+`detllm doctor` checks local dependencies without downloading models.
+`detllm inspect --in <artifact_dir>` summarizes generated artifacts, and
+`detllm profile` lists or runs workflows from config.
 
 ## Known limitations
 
@@ -105,6 +165,12 @@ print(report.status, report.category)
 ## Docs
 
 - [docs/verification.md](docs/verification.md)
+- [docs/examples.md](docs/examples.md)
+- [docs/onboarding.md](docs/onboarding.md)
+- [docs/flight_recorder.md](docs/flight_recorder.md)
+- [docs/phase_diagram.md](docs/phase_diagram.md)
+- [docs/analysis.md](docs/analysis.md)
+- [docs/experiment_planner.md](docs/experiment_planner.md)
 - [docs/determinism_boundary.md](docs/determinism_boundary.md)
 - [docs/troubleshooting.md](docs/troubleshooting.md)
 - [docs/vllm.md](docs/vllm.md)

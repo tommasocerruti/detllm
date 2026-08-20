@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import importlib.resources as resources
+from typing import Any
 
 REQUIRED_HEADER_FIELDS = {"schema_version", "detllm_version", "artifact_type"}
 SCHEMA_MAP = {
@@ -12,6 +11,11 @@ SCHEMA_MAP = {
     "run_config": "run_config",
     "determinism_applied": "determinism_applied",
     "report": "report",
+    "diagnosis": "diagnosis",
+    "replay": "replay",
+    "phase_diagram": "phase_diagram",
+    "analysis": "analysis",
+    "experiment_plan": "experiment_plan",
 }
 
 

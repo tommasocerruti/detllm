@@ -1,0 +1,25 @@
+{
+  "description": "Stable schema. Only additive changes within the same major version.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "detLLM PhaseDiagram",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "detllm_version",
+    "artifact_type",
+    "axes",
+    "dry_run",
+    "summary",
+    "cells"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "detllm_version": {"type": "string"},
+    "artifact_type": {"const": "phase_diagram"},
+    "axes": {"type": "object"},
+    "dry_run": {"type": "boolean"},
+    "summary": {"type": "object"},
+    "cells": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

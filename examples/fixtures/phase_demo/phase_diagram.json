@@ -1,0 +1,123 @@
+{
+  "artifact_type": "phase_diagram",
+  "axes": {
+    "batch_size": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "dtype": [
+      "float32",
+      "bfloat16"
+    ],
+    "max_new_tokens": [
+      16
+    ]
+  },
+  "cells": [
+    {
+      "artifact_path": "cells/batch_size-1__dtype-float32__max_new_tokens-16",
+      "axes": {
+        "batch_size": 1,
+        "dtype": "float32",
+        "max_new_tokens": 16
+      },
+      "cell_id": "batch_size-1__dtype-float32__max_new_tokens-16",
+      "classification": "stable",
+      "diagnosis_causes": [],
+      "execution_status": "executed",
+      "first_divergence": null,
+      "min_topk_margin": 0.42,
+      "report_category": "PASS",
+      "report_status": "PASS"
+    },
+    {
+      "artifact_path": "cells/batch_size-2__dtype-float32__max_new_tokens-16",
+      "axes": {
+        "batch_size": 2,
+        "dtype": "float32",
+        "max_new_tokens": 16
+      },
+      "cell_id": "batch_size-2__dtype-float32__max_new_tokens-16",
+      "classification": "fragile",
+      "diagnosis_causes": [
+        "score_margin_instability"
+      ],
+      "execution_status": "executed",
+      "first_divergence": null,
+      "min_topk_margin": 0.0008,
+      "report_category": "PASS",
+      "report_status": "PASS"
+    },
+    {
+      "artifact_path": "cells/batch_size-4__dtype-bfloat16__max_new_tokens-16",
+      "axes": {
+        "batch_size": 4,
+        "dtype": "bfloat16",
+        "max_new_tokens": 16
+      },
+      "cell_id": "batch_size-4__dtype-bfloat16__max_new_tokens-16",
+      "classification": "unstable",
+      "diagnosis_causes": [
+        "batch_shape_drift"
+      ],
+      "execution_status": "executed",
+      "first_divergence": {
+        "field": "output_ids",
+        "index": 3
+      },
+      "min_topk_margin": 0.012,
+      "report_category": "RUN_VARIANCE_FIXED_BATCH",
+      "report_status": "FAIL"
+    },
+    {
+      "artifact_path": "cells/batch_size-8__dtype-bfloat16__max_new_tokens-16",
+      "axes": {
+        "batch_size": 8,
+        "dtype": "bfloat16",
+        "max_new_tokens": 16
+      },
+      "cell_id": "batch_size-8__dtype-bfloat16__max_new_tokens-16",
+      "classification": "unstable",
+      "diagnosis_causes": [
+        "batch_shape_drift"
+      ],
+      "execution_status": "executed",
+      "first_divergence": {
+        "field": "output_ids",
+        "index": 2
+      },
+      "min_topk_margin": 0.019,
+      "report_category": "RUN_VARIANCE_FIXED_BATCH",
+      "report_status": "FAIL"
+    },
+    {
+      "artifact_path": null,
+      "axes": {
+        "batch_size": 8,
+        "dtype": "float32",
+        "max_new_tokens": 16
+      },
+      "cell_id": "batch_size-8__dtype-float32__max_new_tokens-16",
+      "classification": null,
+      "diagnosis_causes": [],
+      "execution_status": "skipped",
+      "first_divergence": null,
+      "min_topk_margin": null,
+      "report_category": null,
+      "report_status": null
+    }
+  ],
+  "detllm_version": "0.1.1",
+  "dry_run": false,
+  "schema_version": "1.0",
+  "summary": {
+    "fragile": 1,
+    "planned": 0,
+    "skipped": 1,
+    "stable": 1,
+    "total": 5,
+    "unstable": 2
+  }
+}
